@@ -12,7 +12,7 @@ This is a hobby project, but it was tested against real hosts, not only mocks.
 | Host | opencode 1.19.5, Rust host on loopback, live opencode upstream with Basic auth | pass |
 | Packages | Ubuntu/Fedora containers: `.deb` build/install, `.rpm` build/install, signed APT repo, signed DNF metadata | pass |
 | Flatpak | Signed remote add, install, launch (GNOME host) | pass |
-| Android signing | release APK verified with `apksigner`; versionCode 1013 for v0.1.0 | pass |
+| Android signing | release APK verified with `apksigner`; versionCode 1017 for v0.1.0 | pass |
 | CI | web check/build, Rust tests, clippy, cross builds, Android, Flatpak, repos | configured |
 
 The live host used for testing was opencode 1.19.5 with a password-protected `opencode serve`. The demo data used for screenshots was a separate opencode data directory so no real session data is published.
