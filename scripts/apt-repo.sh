@@ -29,7 +29,15 @@ for arch in $ARCHES; do
 done
 
 if command -v apt-ftparchive >/dev/null 2>&1; then
-  (cd "$OUT/dists/$SUITE" && apt-ftparchive release . > Release)
+  (cd "$OUT/dists/$SUITE" && apt-ftparchive \
+    -o APT::FTPArchive::Release::Origin="opencode-tether" \
+    -o APT::FTPArchive::Release::Label="opencode-tether" \
+    -o APT::FTPArchive::Release::Suite="$SUITE" \
+    -o APT::FTPArchive::Release::Codename="$SUITE" \
+    -o APT::FTPArchive::Release::Architectures="$ARCHES" \
+    -o APT::FTPArchive::Release::Components="$COMPONENT" \
+    -o APT::FTPArchive::Release::Description="opencode-tether host packages" \
+    release . > Release)
 else
   {
     echo "Origin: opencode-tether"

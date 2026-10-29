@@ -39,7 +39,7 @@ sudo curl -fsSL https://dixonSolutions.github.io/opencode-tether/repo/rpm/openco
 sudo dnf install opencode-tether
 ```
 
-If the repository is signed, the `.repo` file has `gpgcheck=1` and `repo_gpgcheck=1` and references `repo/key.asc`.
+If the repository is signed, the `.repo` file has `repo_gpgcheck=1` and references `repo/key.asc`. Package payloads are not individually signed; the repository metadata is.
 
 ## Standalone host binary
 

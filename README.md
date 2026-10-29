@@ -1,5 +1,10 @@
 # opencode-tether
 
+[![ci](https://github.com/dixonSolutions/opencode-tether/actions/workflows/ci.yml/badge.svg)](https://github.com/dixonSolutions/opencode-tether/actions/workflows/ci.yml)
+[![release](https://github.com/dixonSolutions/opencode-tether/actions/workflows/release.yml/badge.svg)](https://github.com/dixonSolutions/opencode-tether/actions/workflows/release.yml)
+[![license: MIT](https://img.shields.io/badge/license-MIT-fab283.svg)](LICENSE)
+[![platforms](https://img.shields.io/badge/platforms-Android%20%7C%20Linux%20%7C%20Web-fab283.svg)](#install)
+
 **A native-feeling remote interface for [opencode](https://opencode.ai). Unofficial, independent, and a hobby project.**
 
 opencode keeps its own web app. opencode-tether is a separate, mobile-first client for it: SvelteKit + shadcn-svelte in the browser, Tauri on Android and the desktop, and an optional Rust host that serves the app and proxies the opencode API behind one login.

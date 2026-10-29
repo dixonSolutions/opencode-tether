@@ -26,13 +26,7 @@ fi
 
 if [ -n "${GPG_KEY_ID:-}" ] && command -v gpg >/dev/null 2>&1; then
   gpg --batch --yes --armor --detach-sign --local-user "$GPG_KEY_ID" "$OUT/repodata/repomd.xml"
-  # Also sign the packages for gpgcheck=1 clients.
-  for rpm in "${rpms[@]}"; do
-    if command -v rpmsign >/dev/null 2>&1; then
-      rpmsign --define "_gpg_name $GPG_KEY_ID" --addsign "$OUT/$(basename "$rpm")" >/dev/null 2>&1 || true
-    fi
-  done
-  # Metadata is signed. Individual package signing is optional and depends on rpmsign.
+  # Metadata is signed; package payloads remain unchanged so repository metadata stays accurate.
   sed -i 's/^repo_gpgcheck=0/repo_gpgcheck=1/' "$OUT/opencode-tether.repo" 2>/dev/null || true
   echo "rpm-repo: signed with $GPG_KEY_ID"
 else
