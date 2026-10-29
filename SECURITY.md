@@ -44,6 +44,12 @@ The host is a single-user gateway to an opencode server. The app is a remote con
 - [ ] Review the systemd unit before enabling it.
 - [ ] Use a dedicated user/VM if the projects are sensitive.
 
+## Verifying releases
+
+- Repository signing key: `EB88 9839 57C2 253B 4A5A  2A9A 2E97 9108 DC17 E670`.
+- Android APK signing certificate SHA-256 for v0.1.0: `a0:6f:77:ab:fb:ab:47:28:f2:8e:dd:4a:13:7e:f5:b6:c8:81:d8:4c:9a:a3:a4:04:ff:27:37:11:2a:a8:2f:30`.
+- Every release publishes `SHA256SUMS`.
+
 ## Known limitations
 
 - No multi-user accounts or per-user permissions.

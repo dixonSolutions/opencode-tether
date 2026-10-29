@@ -115,3 +115,28 @@ Every release includes `SHA256SUMS`:
 ```sh
 sha256sum -c SHA256SUMS --ignore-missing
 ```
+
+
+## Signing
+
+The project publishes one signing key for repositories and release metadata:
+
+```
+GPG fingerprint: EB88 9839 57C2 253B 4A5A  2A9A 2E97 9108 DC17 E670
+Key: https://dixonSolutions.github.io/opencode-tether/repo/key.asc
+```
+
+The Android release builds are signed with the project Android key. Verify the APK certificate:
+
+```sh
+apksigner verify --print-certs opencode-tether-<version>-android-universal.apk
+```
+
+The v0.1.0 certificate SHA-256 is:
+
+```
+a0:6f:77:ab:fb:ab:47:28:f2:8e:dd:4a:13:7e:f5:b6:
+c8:81:d8:4c:9a:a3:a4:04:ff:27:37:11:2a:a8:2f:30
+```
+
+Every release includes `SHA256SUMS`. Check downloaded files before installing.
