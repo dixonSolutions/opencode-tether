@@ -1,0 +1,363 @@
+name: release
+
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  NODE_VERSION: '22'
+  GNOME_RUNTIME: '48'
+
+jobs:
+  meta:
+    name: version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+      - id: version
+        shell: bash
+        run: |
+          BASE=$(node -p "require('./apps/tether/package.json').version")
+          if [ "${GITHUB_REF_TYPE}" = "tag" ]; then
+            VERSION="${GITHUB_REF_NAME#v}"
+            TAG="${GITHUB_REF_NAME}"
+            PRE=false
+          else
+            VERSION="${BASE}-main.${GITHUB_RUN_NUMBER}"
+            TAG="v${VERSION}"
+            PRE=true
+          fi
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRE" >> "$GITHUB_OUTPUT"
+          echo "Building $VERSION ($TAG, prerelease=$PRE)"
+
+  server:
+    name: server ${{ matrix.target }}
+    needs: meta
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - x86_64-unknown-linux-musl
+          - aarch64-unknown-linux-musl
+          - armv7-unknown-linux-musleabihf
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/tether/package-lock.json
+      - run: npm ci && npm run build
+        working-directory: apps/tether
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cross
+      - run: rustup target add ${{ matrix.target }}
+      - run: cross build --release --target ${{ matrix.target }}
+        working-directory: server
+      - name: Stage binary
+        run: |
+          mkdir -p dist
+          cp "server/target/${{ matrix.target }}/release/opencode-tether" "dist/opencode-tether-${{ matrix.target }}"
+          chmod +x "dist/opencode-tether-${{ matrix.target }}"
+          file "dist/opencode-tether-${{ matrix.target }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: server-${{ matrix.target }}
+          path: dist/opencode-tether-${{ matrix.target }}
+
+  packages:
+    name: deb and rpm
+    needs: [meta, server]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: server-*
+          path: dist
+          merge-multiple: true
+      - uses: actions/setup-go@v5
+        with:
+          go-version: stable
+      - run: |
+          go install github.com/goreleaser/nfpm/v2/cmd/nfpm@latest
+          echo "$(go env GOPATH)/bin" >> "$GITHUB_PATH"
+      - name: Build packages
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          PKG_VERSION="${VERSION%%-*}"
+          for binary in dist/opencode-tether-*; do
+            case "$binary" in
+              *x86_64*) deb=amd64; rpm=x86_64 ;;
+              *aarch64*) deb=arm64; rpm=aarch64 ;;
+              *armv7*) deb=armhf; rpm=armv7hl ;;
+              *) echo "unknown target: $binary" >&2; exit 1 ;;
+            esac
+            VERSION="$PKG_VERSION" ARCH="$deb" BINARY="$binary" scripts/package.sh deb "dist/opencode-tether_${PKG_VERSION}_${deb}.deb"
+            VERSION="$PKG_VERSION" ARCH="$rpm" BINARY="$binary" scripts/package.sh rpm "dist/opencode-tether-${PKG_VERSION}-1.${rpm}.rpm"
+          done
+          ls -lh dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: packages
+          path: |
+            dist/*.deb
+            dist/*.rpm
+
+  desktop:
+    name: desktop binary
+    needs: meta
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/tether/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/tether/src-tauri
+      - name: Install Tauri system dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libwebkit2gtk-4.1-dev libgtk-3-dev libsoup-3.0-dev \
+            libjavascriptcoregtk-4.1-dev librsvg2-dev patchelf libayatana-appindicator3-dev \
+            libdbus-1-dev libxdo-dev
+      - run: npm ci && npm run build
+        working-directory: apps/tether
+      - name: Build desktop binary with embedded assets
+        working-directory: apps/tether/src-tauri
+        env:
+          TAURI_ENV_DEBUG: 'false'
+        run: cargo build --release --features tauri/custom-protocol
+      - name: Stage binary
+        run: |
+          mkdir -p dist
+          cp apps/tether/src-tauri/target/release/opencode-tether dist/opencode-tether-desktop-x86_64
+          chmod +x dist/opencode-tether-desktop-x86_64
+          file dist/opencode-tether-desktop-x86_64
+      - uses: actions/upload-artifact@v4
+        with:
+          name: desktop
+          path: dist/opencode-tether-desktop-x86_64
+
+  android:
+    name: android
+    needs: meta
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --install "platforms;android-37.0" "build-tools;36.0.0" "ndk;27.2.12479018" >/dev/null
+          echo "NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+          echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.2.12479018" >> "$GITHUB_ENV"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: apps/tether/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apps/tether/src-tauri
+      - run: npm ci && npm run build
+        working-directory: apps/tether
+      - name: Build APK
+        shell: bash
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          cd apps/tether
+          if [ -n "${ANDROID_KEYSTORE_BASE64:-}" ]; then
+            echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.keystore"
+            cat > src-tauri/gen/android/keystore.properties <<EOF
+          storeFile=$RUNNER_TEMP/release.keystore
+          storePassword=$ANDROID_KEYSTORE_PASSWORD
+          keyAlias=$ANDROID_KEY_ALIAS
+          keyPassword=$ANDROID_KEY_PASSWORD
+          EOF
+            npx tauri android build --apk
+          else
+            echo "No Android signing secrets; building a debug-signed APK." >&2
+            npx tauri android build --debug --apk
+          fi
+          mkdir -p ../../dist
+          find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' -print
+          APK=$(find src-tauri/gen/android/app/build/outputs/apk -name 'app-universal-release.apk' | head -1)
+          if [ -z "$APK" ]; then APK=$(find src-tauri/gen/android/app/build/outputs/apk -name 'app-universal-debug.apk' | head -1); fi
+          cp "$APK" "../../dist/opencode-tether-${{ needs.meta.outputs.version }}-android-universal.apk"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android
+          path: dist/*.apk
+
+  flatpak:
+    name: flatpak
+    needs: [meta, desktop]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          name: desktop
+          path: dist
+      - name: Install Flatpak tooling
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y flatpak flatpak-builder
+          flatpak remote-add --if-not-exists --user flathub https://flathub.org/repo/flathub.flatpakrepo
+          flatpak install -y --user flathub org.gnome.Platform//${{ env.GNOME_RUNTIME }} org.gnome.Sdk//${{ env.GNOME_RUNTIME }}
+      - name: Build Flatpak repository
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+        run: |
+          set -euo pipefail
+          mkdir -p public dist
+          scripts/stage-flatpak.sh dist/opencode-tether-desktop-x86_64
+          if [ -n "${GPG_PRIVATE_KEY:-}" ]; then
+            echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+          fi
+          (cd packaging/flatpak && flatpak-builder --force-clean --disable-rofiles-fuse --user --repo ../../public/repo/flatpak build-dir ai.opencode.tether.yml)
+          SIGN_ARGS=()
+          if [ -n "${GPG_KEY_ID:-}" ]; then SIGN_ARGS+=(--gpg-sign="$GPG_KEY_ID"); fi
+          flatpak build-update-repo --prune --generate-static-deltas "${SIGN_ARGS[@]}" public/repo/flatpak
+          install -m 644 packaging/flatpak/ai.opencode.tether.flatpakref public/ai.opencode.tether.flatpakref
+          flatpak build-bundle public/repo/flatpak "dist/ai.opencode.tether-${VERSION}.flatpak" ai.opencode.tether stable || true
+      - uses: actions/upload-artifact@v4
+        with:
+          name: flatpak
+          path: |
+            public/repo/flatpak
+            public/ai.opencode.tether.flatpakref
+            dist/*.flatpak
+
+  pages:
+    name: package repositories
+    needs: [meta, packages, flatpak]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Assemble public repository
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
+        run: |
+          set -euo pipefail
+          sudo apt-get update
+          sudo apt-get install -y dpkg-dev createrepo-c gnupg
+          mkdir -p public/repo dist
+          cp -r artifacts/flatpak/public/* public/ 2>/dev/null || true
+          cp -r artifacts/flatpak/dist/* dist/ 2>/dev/null || true
+          cp artifacts/packages/*.deb dist/ 2>/dev/null || true
+          cp artifacts/packages/*.rpm dist/ 2>/dev/null || true
+          if [ -n "${GPG_PRIVATE_KEY:-}" ]; then
+            echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+            if [ -n "${GPG_KEY_ID:-}" ]; then gpg --armor --export "$GPG_KEY_ID" > public/repo/key.asc; fi
+          fi
+          GPG_KEY_ID="${GPG_KEY_ID:-}" scripts/apt-repo.sh dist public/repo/apt
+          GPG_KEY_ID="${GPG_KEY_ID:-}" scripts/rpm-repo.sh dist public/repo/rpm
+          cp scripts/install.sh public/install.sh
+          cp packaging/apt/opencode-tether.list public/opencode-tether.list 2>/dev/null || true
+          cat > public/index.html <<'HTML'
+          <!doctype html><meta charset="utf-8"><title>opencode-tether packages</title>
+          <style>body{font:16px system-ui;max-width:42rem;margin:4rem auto;padding:0 1rem;background:#0b0a0a;color:#f5f2f0}a{color:#fab283}</style>
+          <h1>opencode-tether</h1>
+          <p>Unofficial remote interface for opencode.</p>
+          <ul>
+            <li><a href="https://github.com/dixonSolutions/opencode-tether">GitHub repository</a></li>
+            <li><a href="https://github.com/dixonSolutions/opencode-tether/releases">Releases</a></li>
+            <li><a href="repo/apt">APT repository</a> · <a href="repo/rpm">DNF repository</a> · <a href="repo/flatpak">Flatpak repository</a></li>
+          </ul>
+          HTML
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: public
+          force_orphan: true
+
+  release:
+    name: release
+    needs: [meta, server, packages, android, flatpak, desktop]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+      - name: Collect assets
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+        run: |
+          set -euo pipefail
+          mkdir -p dist
+          cp artifacts/server-*/* dist/ 2>/dev/null || true
+          cp artifacts/packages/* dist/ 2>/dev/null || true
+          cp artifacts/android/* dist/ 2>/dev/null || true
+          cp artifacts/flatpak/dist/* dist/ 2>/dev/null || true
+          cp artifacts/desktop/* dist/ 2>/dev/null || true
+          mv "dist/opencode-tether-desktop-x86_64" "dist/opencode-tether-${VERSION}-desktop-x86_64" 2>/dev/null || true
+          (cd dist && sha256sum * > SHA256SUMS)
+          ls -lh dist
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.meta.outputs.tag }}
+          name: opencode-tether ${{ needs.meta.outputs.version }}
+          prerelease: ${{ needs.meta.outputs.prerelease == 'true' }}
+          generate_release_notes: true
+          body: |
+            Unofficial, hobby-project remote interface for opencode.
+
+            - Android: manual APK install (updates are manual)
+            - Linux desktop: Flatpak remote (managed updates through Flatpak)
+            - Host: APT/DNF repositories and standalone binaries
+            - Docs: https://github.com/dixonSolutions/opencode-tether
+
+            SHA256 sums are attached as `SHA256SUMS`.
+          files: dist/*

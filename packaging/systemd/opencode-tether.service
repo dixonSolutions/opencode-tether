@@ -1,0 +1,16 @@
+[Unit]
+Description=opencode-tether host (unofficial opencode remote)
+Documentation=https://github.com/dixonSolutions/opencode-tether
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/opencode-tether serve --config %h/.config/opencode-tether/config.toml
+Restart=on-failure
+RestartSec=3
+# opencode needs access to the projects it works on, so this unit is meant to run
+# as your user (a systemd user service), not as a system-wide service.
+
+[Install]
+WantedBy=default.target

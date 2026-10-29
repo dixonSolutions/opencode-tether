@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=opencode-tether
+Comment=Unofficial remote interface for opencode
+Exec=opencode-tether %U
+Icon=ai.opencode.tether
+Terminal=false
+Type=Application
+Categories=Development;
+Keywords=opencode;ai;remote;agent;terminal;
+StartupWMClass=opencode-tether
+StartupNotify=true

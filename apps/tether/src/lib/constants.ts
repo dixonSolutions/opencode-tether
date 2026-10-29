@@ -1,0 +1,12 @@
+export const APP_NAME = 'opencode-tether';
+export const APP_VERSION = '0.1.0';
+export const REPO = 'dixonSolutions/opencode-tether';
+export const GITHUB_URL = `https://github.com/${REPO}`;
+export const RELEASES_URL = `${GITHUB_URL}/releases`;
+export const LATEST_RELEASE_API = `https://api.github.com/repos/${REPO}/releases/latest`;
+export const DOCS_URL = `${GITHUB_URL}#readme`;
+export const FLATPAK_ID = 'ai.opencode.tether';
+export const FLATPAKREF_URL = `${GITHUB_URL}/raw/main/packaging/flatpak/${FLATPAK_ID}.flatpakref`;
+export const OPENCODE_URL = 'https://opencode.ai';
+export const OPENCODE_REPO = 'https://github.com/sst/opencode';
+export const HOST_DEFAULT_PORT = 4096;

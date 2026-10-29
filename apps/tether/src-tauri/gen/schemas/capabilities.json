@@ -1,0 +1,1 @@
+{"default":{"identifier":"default","description":"Default capability for the opencode-tether window","local":true,"windows":["main"],"permissions":["core:default","store:default","os:default","opener:default","dialog:default","clipboard-manager:default"]}}

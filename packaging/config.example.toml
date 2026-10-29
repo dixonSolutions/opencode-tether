@@ -1,0 +1,41 @@
+# opencode-tether host configuration
+# Create this file with: opencode-tether init
+# This example is intentionally incomplete; never use the placeholder password hash.
+
+[server]
+bind = "0.0.0.0:4096"
+username = "opencode"
+# Generate a real hash with `opencode-tether init`.
+password_hash = ""
+# Generate with `opencode-tether init` (64 hex characters).
+cookie_secret = ""
+secure_cookies = false
+# public_url = "https://tether.example.com"
+allowed_origins = ["http://tauri.localhost", "https://tauri.localhost", "tauri://localhost"]
+session_days = 30
+
+[opencode]
+# Variables: {port}, {hostname}, {bind}, {url}
+command = "opencode serve --hostname 127.0.0.1 --port {port}"
+port = 5191
+hostname = "127.0.0.1"
+autostart = true
+startup_timeout_secs = 40
+health_interval_secs = 10
+# working_dir = "/home/me/projects"
+# Set these only when proxying an opencode server that already has HTTP auth:
+# username = ""
+# password = ""
+
+[opencode.env]
+# OPENCODE_CONFIG = "/home/me/.config/opencode/opencode.json"
+
+[web]
+# Leave unset to use the web app embedded in the binary.
+# root = "/usr/share/opencode-tether/web"
+title = "opencode-tether"
+
+[update]
+repo = "dixonSolutions/opencode-tether"
+channel = "stable"
+check_on_start = true

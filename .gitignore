@@ -1,0 +1,52 @@
+# JavaScript
+node_modules/
+.svelte-kit/
+apps/tether/build/
+apps/tether/.tmp-*
+.tmp-*
+
+# Rust
+target/
+**/target/
+server/web/
+
+# Distribution
+dist/
+public/
+*.deb
+*.rpm
+*.flatpak
+*.AppImage
+*.apk
+
+# Tauri Android generated build state
+apps/tether/src-tauri/gen/android/.gradle/
+apps/tether/src-tauri/gen/android/build/
+apps/tether/src-tauri/gen/android/app/build/
+apps/tether/src-tauri/gen/android/.idea/
+apps/tether/src-tauri/gen/android/local.properties
+apps/tether/src-tauri/gen/android/keystore.properties
+apps/tether/src-tauri/gen/android/.tauri/
+apps/tether/src-tauri/gen/android/app/src/main/jniLibs/
+apps/tether/src-tauri/gen/android/app/src/main/assets/
+apps/tether/src-tauri/gen/android/app/src/main/res/values/tauri.properties
+
+# Secrets and keys
+.env
+.env.*
+*.jks
+*.keystore
+*.p12
+*.gpg
+
+# Local config and screenshots under test
+/tmp/
+
+# Editor/agent settings
+.claude/
+
+# Editors / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp

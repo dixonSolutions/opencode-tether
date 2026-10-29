@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<component type="desktop-application">
+  <id>ai.opencode.tether</id>
+  <metadata_license>MIT</metadata_license>
+  <project_license>MIT</project_license>
+  <name>opencode-tether</name>
+  <summary>Unofficial remote interface for opencode</summary>
+  <developer id="ai.opencode">
+    <name>opencode-tether contributors</name>
+  </developer>
+  <description>
+    <p>
+      opencode-tether is an unofficial, independent hobby project that puts a native,
+      mobile-first remote interface on top of opencode. Connect to a local or remote
+      opencode host, manage sessions, follow agent output, and answer tool permissions
+      from a phone, tablet, or desktop.
+    </p>
+    <p>
+      It is not affiliated with or endorsed by the opencode project. The opencode mark
+      is used only to identify the service this app connects to.
+    </p>
+    <p>
+      The recommended setup is the Rust host shim on the machine running opencode. It
+      serves this app and proxies the opencode API behind a single login.
+    </p>
+  </description>
+  <launchable type="desktop-id">ai.opencode.tether.desktop</launchable>
+  <url type="homepage">https://github.com/dixonSolutions/opencode-tether</url>
+  <url type="bugtracker">https://github.com/dixonSolutions/opencode-tether/issues</url>
+  <url type="vcs-browser">https://github.com/dixonSolutions/opencode-tether</url>
+  <screenshots>
+    <screenshot type="default">
+      <image>https://raw.githubusercontent.com/dixonSolutions/opencode-tether/main/docs/screenshots/web-desktop.png</image>
+      <caption>Desktop session view</caption>
+    </screenshot>
+    <screenshot>
+      <image>https://raw.githubusercontent.com/dixonSolutions/opencode-tether/main/docs/screenshots/android-portrait.png</image>
+      <caption>Android portrait session view</caption>
+    </screenshot>
+  </screenshots>
+  <releases>
+    <release version="0.1.0" date="2026-10-29">
+      <description>
+        <p>First public release: remote management, host mode, live sessions, model and agent selection, permission prompts, and native Android and desktop builds.</p>
+      </description>
+    </release>
+  </releases>
+  <content_rating type="oars-1.1" />
+</component>

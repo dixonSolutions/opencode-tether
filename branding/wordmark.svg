@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="900" height="200" viewBox="0 0 900 200" fill="none">
+  <g transform="translate(10 20) scale(0.28)">
+    <rect width="512" height="512" rx="112" fill="#131010"/>
+    <path d="M320 224V352H192V224H320Z" fill="#5A5858"/>
+    <path fill-rule="evenodd" clip-rule="evenodd" d="M384 416H128V96H384V416ZM320 160H192V352H320V160Z" fill="white"/>
+    <path d="M374 400c25-15 38-42 38-70" stroke="#fab283" stroke-width="20" stroke-linecap="round"/>
+    <circle cx="374" cy="400" r="16" fill="#131010" stroke="#fab283" stroke-width="10"/>
+  </g>
+  <text x="190" y="120" fill="#f5f5f5" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="84" font-weight="650" letter-spacing="-3">opencode</text>
+  <text x="640" y="120" fill="#fab283" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="84" font-weight="650" letter-spacing="-3">tether</text>
+  <text x="193" y="158" fill="#8d8888" font-family="Inter, ui-sans-serif, system-ui, sans-serif" font-size="25" font-weight="500" letter-spacing="1">UNOFFICIAL REMOTE INTERFACE</text>
+</svg>

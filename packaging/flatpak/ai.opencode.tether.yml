@@ -1,0 +1,33 @@
+app-id: ai.opencode.tether
+runtime: org.gnome.Platform
+runtime-version: '48'
+sdk: org.gnome.Sdk
+command: opencode-tether
+finish-args:
+  - --share=network
+  - --share=ipc
+  - --socket=wayland
+  - --socket=fallback-x11
+  - --device=dri
+  - --filesystem=xdg-download
+  - --talk-name=org.freedesktop.portal.Desktop
+  - --talk-name=org.freedesktop.portal.OpenURI
+  - --talk-name=org.freedesktop.Notifications
+  - --talk-name=org.freedesktop.secrets
+modules:
+  - name: opencode-tether
+    buildsystem: simple
+    build-commands:
+      - install -Dm755 opencode-tether /app/bin/opencode-tether
+      - install -Dm644 ai.opencode.tether.desktop /app/share/applications/ai.opencode.tether.desktop
+      - install -Dm644 ai.opencode.tether.metainfo.xml /app/share/metainfo/ai.opencode.tether.metainfo.xml
+      - install -Dm644 ai.opencode.tether.png /app/share/icons/hicolor/512x512/apps/ai.opencode.tether.png
+    sources:
+      - type: file
+        path: opencode-tether
+      - type: file
+        path: ai.opencode.tether.desktop
+      - type: file
+        path: ai.opencode.tether.metainfo.xml
+      - type: file
+        path: ai.opencode.tether.png
