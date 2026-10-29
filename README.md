@@ -121,19 +121,14 @@ Open the host address in a browser. The host serves the app itself; there is not
 ### Flatpak (Linux desktop app)
 
 ```sh
-flatpak remote-add --if-not-exists --user --no-gpg-verify tether \
-  https://dixonSolutions.github.io/opencode-tether/repo/flatpak
-flatpak install --user tether ai.opencode.tether
-```
-
-Remove `--no-gpg-verify` when the repository is published with a signing key, and import the key first:
-
-```sh
 curl -fsSL https://dixonSolutions.github.io/opencode-tether/repo/key.asc \
   -o /tmp/opencode-tether.asc
 flatpak remote-add --if-not-exists --user --gpg-import=/tmp/opencode-tether.asc tether \
   https://dixonSolutions.github.io/opencode-tether/repo/flatpak
+flatpak install --user tether ai.opencode.tether
 ```
+
+If you are testing an unsigned local build of the repository, add it with `--no-gpg-verify` instead.
 
 Updates are managed by Flatpak:
 

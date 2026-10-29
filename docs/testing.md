@@ -10,8 +10,9 @@ This is a hobby project, but it was tested against real hosts, not only mocks.
 | Android | Android 13 x86_64 VM, 1280×800 landscape and 800×1280 portrait, release APK | pass |
 | Desktop | Tauri debug build under Xvfb, 1440×900 and 1280×800 | pass |
 | Host | opencode 1.19.5, Rust host on loopback, live opencode upstream with Basic auth | pass |
-| Packages | Ubuntu container: `.deb` build/install, `.rpm` build, APT repo, DNF repo | pass |
-| Android signing | release APK verified with `apksigner` | pass |
+| Packages | Ubuntu/Fedora containers: `.deb` build/install, `.rpm` build/install, signed APT repo, signed DNF metadata | pass |
+| Flatpak | Signed remote add, install, launch (GNOME host) | pass |
+| Android signing | release APK verified with `apksigner`; versionCode 1013 for v0.1.0 | pass |
 | CI | web check/build, Rust tests, clippy, cross builds, Android, Flatpak, repos | configured |
 
 The live host used for testing was opencode 1.19.5 with a password-protected `opencode serve`. The demo data used for screenshots was a separate opencode data directory so no real session data is published.
@@ -63,7 +64,8 @@ adb exec-out screencap -p > shot.png
 - Upstream command substitution, startup readiness, shutdown, and child cleanup.
 - `init` writes Argon2 hash + 0600 config; `config show` redacts hashes, cookie secret, and upstream password.
 - `doctor`, `status`, `service install/uninstall`.
-- `update --check` path (network dependent).
+- `update --check` against the published v0.1.0 release.
+- Published APT repository installed with `signed-by`; published DNF repository installed with signed metadata; published Flatpak remote installed with the project key.
 
 ## Rust tests
 
