@@ -5,6 +5,8 @@ set -euo pipefail
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 DIST=${1:-$ROOT/dist}
 OUT=${2:-$ROOT/public/repo/apt}
+mkdir -p "$OUT"
+OUT=$(cd "$OUT" && pwd)
 SUITE=stable
 COMPONENT=main
 POOL="$OUT/pool/main/o/opencode-tether"

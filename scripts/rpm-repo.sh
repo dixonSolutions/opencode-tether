@@ -7,6 +7,7 @@ DIST=${1:-$ROOT/dist}
 OUT=${2:-$ROOT/public/repo/rpm}
 
 mkdir -p "$OUT"
+OUT=$(cd "$OUT" && pwd)
 shopt -s nullglob
 rpms=("$DIST"/*.rpm)
 if [ ${#rpms[@]} -eq 0 ]; then
@@ -31,7 +32,8 @@ if [ -n "${GPG_KEY_ID:-}" ] && command -v gpg >/dev/null 2>&1; then
       rpmsign --define "_gpg_name $GPG_KEY_ID" --addsign "$OUT/$(basename "$rpm")" >/dev/null 2>&1 || true
     fi
   done
-  sed -i 's/^gpgcheck=0/gpgcheck=1/; s/^repo_gpgcheck=0/repo_gpgcheck=1/' "$OUT/opencode-tether.repo" 2>/dev/null || true
+  # Metadata is signed. Individual package signing is optional and depends on rpmsign.
+  sed -i 's/^repo_gpgcheck=0/repo_gpgcheck=1/' "$OUT/opencode-tether.repo" 2>/dev/null || true
   echo "rpm-repo: signed with $GPG_KEY_ID"
 else
   echo "rpm-repo: unsigned (set GPG_KEY_ID to sign)" >&2
