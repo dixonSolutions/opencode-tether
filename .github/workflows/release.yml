@@ -206,6 +206,16 @@ jobs:
           workspaces: apps/tether/src-tauri
       - run: npm ci && npm run build
         working-directory: apps/tether
+      - name: Set Android version code
+        working-directory: apps/tether
+        run: |
+          python3 - <<'PY'
+          import json, os
+          path = 'src-tauri/tauri.conf.json'
+          data = json.load(open(path))
+          data.setdefault('bundle', {}).setdefault('android', {})['versionCode'] = 1000 + int(os.environ['GITHUB_RUN_NUMBER'])
+          json.dump(data, open(path, 'w'), indent=2)
+          PY
       - name: Build APK
         shell: bash
         env:
