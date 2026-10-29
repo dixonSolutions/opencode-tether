@@ -4,5 +4,6 @@ baseurl=https://dixonSolutions.github.io/opencode-tether/repo/rpm
 enabled=1
 gpgcheck=0
 repo_gpgcheck=0
+gpgkey=https://dixonSolutions.github.io/opencode-tether/repo/key.asc
 type=rpm-md
 skip_if_unavailable=True

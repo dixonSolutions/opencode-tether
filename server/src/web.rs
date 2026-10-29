@@ -4,7 +4,7 @@ use percent_encoding::percent_decode_str;
 use rust_embed::RustEmbed;
 
 #[derive(RustEmbed)]
-#[folder = "../apps/tether/build/"]
+#[folder = "web/"]
 struct Assets;
 
 #[derive(Clone, Debug)]
