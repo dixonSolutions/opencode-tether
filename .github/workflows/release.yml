@@ -261,7 +261,7 @@ jobs:
           GPG_KEY_ID: ${{ secrets.GPG_KEY_ID }}
         run: |
           set -euo pipefail
-          mkdir -p public dist
+          mkdir -p public/repo/flatpak dist
           scripts/stage-flatpak.sh dist/opencode-tether-desktop-x86_64
           if [ -n "${GPG_PRIVATE_KEY:-}" ]; then
             echo "$GPG_PRIVATE_KEY" | gpg --batch --import
