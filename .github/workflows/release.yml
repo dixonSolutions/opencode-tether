@@ -278,9 +278,13 @@ jobs:
             GPG_KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/{print $10; exit}')
             echo "signing with $GPG_KEY_ID"
           fi
-          (cd packaging/flatpak && flatpak-builder --force-clean --disable-rofiles-fuse --user --repo ../../public/repo/flatpak build-dir ai.opencode.tether.yml)
+          FB_ARGS=(--force-clean --disable-rofiles-fuse --user --repo ../../public/repo/flatpak)
           SIGN_ARGS=()
-          if [ -n "${GPG_KEY_ID:-}" ]; then SIGN_ARGS+=(--gpg-sign="$GPG_KEY_ID"); fi
+          if [ -n "${GPG_KEY_ID:-}" ]; then
+            FB_ARGS+=(--gpg-sign="$GPG_KEY_ID")
+            SIGN_ARGS+=(--gpg-sign="$GPG_KEY_ID")
+          fi
+          (cd packaging/flatpak && flatpak-builder "${FB_ARGS[@]}" build-dir ai.opencode.tether.yml)
           flatpak build-update-repo --prune --generate-static-deltas "${SIGN_ARGS[@]}" public/repo/flatpak
           install -m 644 packaging/flatpak/ai.opencode.tether.flatpakref public/ai.opencode.tether.flatpakref
           flatpak build-bundle public/repo/flatpak "dist/ai.opencode.tether-${VERSION}.flatpak" ai.opencode.tether stable || true
