@@ -275,6 +275,8 @@ jobs:
           scripts/stage-flatpak.sh dist/opencode-tether-desktop-x86_64
           if [ -n "${GPG_PRIVATE_KEY:-}" ]; then
             echo "$GPG_PRIVATE_KEY" | gpg --batch --import
+            GPG_KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/{print $10; exit}')
+            echo "signing with $GPG_KEY_ID"
           fi
           (cd packaging/flatpak && flatpak-builder --force-clean --disable-rofiles-fuse --user --repo ../../public/repo/flatpak build-dir ai.opencode.tether.yml)
           SIGN_ARGS=()
@@ -313,9 +315,12 @@ jobs:
           cp -r artifacts/flatpak/dist/* dist/ 2>/dev/null || true
           cp artifacts/packages/*.deb dist/ 2>/dev/null || true
           cp artifacts/packages/*.rpm dist/ 2>/dev/null || true
+          mkdir -p public/repo
           if [ -n "${GPG_PRIVATE_KEY:-}" ]; then
             echo "$GPG_PRIVATE_KEY" | gpg --batch --import
-            if [ -n "${GPG_KEY_ID:-}" ]; then gpg --armor --export "$GPG_KEY_ID" > public/repo/key.asc; fi
+            GPG_KEY_ID=$(gpg --list-secret-keys --with-colons | awk -F: '/^fpr:/{print $10; exit}')
+            gpg --armor --export "$GPG_KEY_ID" > public/repo/key.asc
+            echo "signing with $GPG_KEY_ID"
           fi
           GPG_KEY_ID="${GPG_KEY_ID:-}" scripts/apt-repo.sh dist public/repo/apt
           GPG_KEY_ID="${GPG_KEY_ID:-}" scripts/rpm-repo.sh dist public/repo/rpm
