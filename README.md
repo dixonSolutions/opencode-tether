@@ -7,6 +7,8 @@
 
 **A native-feeling remote interface for [opencode](https://opencode.ai). Unofficial, independent, and a hobby project.**
 
+**Status:** `0.1.0` is the first public release. It is usable and tested, but expect hobby-project rough edges; please open an issue for anything that breaks.
+
 opencode keeps its own web app. opencode-tether is a separate, mobile-first client for it: SvelteKit + shadcn-svelte in the browser, Tauri on Android and the desktop, and an optional Rust host that serves the app and proxies the opencode API behind one login.
 
 ![opencode-tether on the desktop](docs/screenshots/web-desktop.png)
