@@ -1,7 +1,7 @@
 # opencode-tether
 
 [![ci](https://github.com/dixonSolutions/opencode-tether/actions/workflows/ci.yml/badge.svg)](https://github.com/dixonSolutions/opencode-tether/actions/workflows/ci.yml)
-[![release](https://github.com/dixonSolutions/opencode-tether/actions/workflows/release.yml/badge.svg)](https://github.com/dixonSolutions/opencode-tether/actions/workflows/release.yml)
+[![release](https://img.shields.io/github/v/release/dixonSolutions/opencode-tether?color=fab283)](https://github.com/dixonSolutions/opencode-tether/releases)
 [![license: MIT](https://img.shields.io/badge/license-MIT-fab283.svg)](LICENSE)
 [![platforms](https://img.shields.io/badge/platforms-Android%20%7C%20Linux%20%7C%20Web-fab283.svg)](#install)
 
