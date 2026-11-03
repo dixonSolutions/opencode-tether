@@ -1,0 +1,8 @@
+[Flatpak Ref]
+Title=opencode-tether
+Name=ai.opencode.tether
+Branch=stable
+Url=https://dixonSolutions.github.io/opencode-tether/repo/flatpak
+RuntimeRepo=https://flathub.org/repo/flathub.flatpakrepo
+IsRuntime=false
+SuggestRemoteName=opencode-tether

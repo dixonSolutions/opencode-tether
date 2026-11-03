@@ -1,0 +1,54 @@
+Package: opencode-tether
+Version: 0.3.0
+Architecture: amd64
+Maintainer: opencode-tether contributors <noreply@opencode-tether.invalid>
+Installed-Size: 7462
+Provides: opencode-tether
+Filename: pool/main/o/opencode-tether/opencode-tether_0.3.0_amd64.deb
+Size: 3530652
+MD5sum: e0e36affaaea6a67dd4cc95559e4826e
+SHA1: 84e1871764bb280aad1f3aec2e942266726b0c5f
+SHA256: 811896c2394ef027da8c3ead408c9aebf2edebb80d11b2b1c16ee8bdeec6be53
+Section: utils
+Priority: optional
+Homepage: https://github.com/dixonSolutions/opencode-tether
+Description: Unofficial host and CLI for opencode-tether.
+ Serves the opencode-tether web app, launches and proxies an opencode server,
+ and exposes the opencode API behind one login.
+
+Package: opencode-tether
+Version: 0.3.0
+Architecture: arm64
+Maintainer: opencode-tether contributors <noreply@opencode-tether.invalid>
+Installed-Size: 6470
+Provides: opencode-tether
+Filename: pool/main/o/opencode-tether/opencode-tether_0.3.0_arm64.deb
+Size: 3367610
+MD5sum: 0c3aa115831a83ba33e02c3e8d32fda3
+SHA1: 21867969f34f9c16305a0e20cb549484fe9c26c6
+SHA256: fe62ee953a7caddab8f6db9d51182fa1237939e41008082efe58ef60db15cd49
+Section: utils
+Priority: optional
+Homepage: https://github.com/dixonSolutions/opencode-tether
+Description: Unofficial host and CLI for opencode-tether.
+ Serves the opencode-tether web app, launches and proxies an opencode server,
+ and exposes the opencode API behind one login.
+
+Package: opencode-tether
+Version: 0.3.0
+Architecture: armhf
+Maintainer: opencode-tether contributors <noreply@opencode-tether.invalid>
+Installed-Size: 6210
+Provides: opencode-tether
+Filename: pool/main/o/opencode-tether/opencode-tether_0.3.0_armhf.deb
+Size: 3213942
+MD5sum: d5a1ec804911f457648433f896acc277
+SHA1: fa58c257c5186154334e3e04d285db7320301c94
+SHA256: f70137bea9513bac0bea5de53a946962bc6b7f0c54183a54f7face5aaef8ce67
+Section: utils
+Priority: optional
+Homepage: https://github.com/dixonSolutions/opencode-tether
+Description: Unofficial host and CLI for opencode-tether.
+ Serves the opencode-tether web app, launches and proxies an opencode server,
+ and exposes the opencode API behind one login.
+

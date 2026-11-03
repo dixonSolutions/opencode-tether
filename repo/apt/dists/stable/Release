@@ -1,0 +1,40 @@
+Architectures: amd64 arm64 armhf
+Codename: stable
+Components: main
+Date: Tue, 03 Nov 2026 06:47:01 +0000
+Description: opencode-tether host packages
+Label: opencode-tether
+Origin: opencode-tether
+Suite: stable
+MD5Sum:
+ f0b2f0ed6bcc737748e46ca82b427965              209 Release
+ e5269e41b41a4cfef7e356a1125aa811             2118 main/binary-amd64/Packages
+ e0b0d9bfc786d2e58ef5efb1166179fb              699 main/binary-amd64/Packages.gz
+ e5269e41b41a4cfef7e356a1125aa811             2118 main/binary-arm64/Packages
+ e0b0d9bfc786d2e58ef5efb1166179fb              699 main/binary-arm64/Packages.gz
+ e5269e41b41a4cfef7e356a1125aa811             2118 main/binary-armhf/Packages
+ e0b0d9bfc786d2e58ef5efb1166179fb              699 main/binary-armhf/Packages.gz
+SHA1:
+ e96a017a22b18d47fb4baf380377f9e1e71efbc2              209 Release
+ c80b6faa0e479fd06ca1b7328dae5dd3d10680a7             2118 main/binary-amd64/Packages
+ dd4307e2d4fcb4d51a5e6f918740e84123e05c81              699 main/binary-amd64/Packages.gz
+ c80b6faa0e479fd06ca1b7328dae5dd3d10680a7             2118 main/binary-arm64/Packages
+ dd4307e2d4fcb4d51a5e6f918740e84123e05c81              699 main/binary-arm64/Packages.gz
+ c80b6faa0e479fd06ca1b7328dae5dd3d10680a7             2118 main/binary-armhf/Packages
+ dd4307e2d4fcb4d51a5e6f918740e84123e05c81              699 main/binary-armhf/Packages.gz
+SHA256:
+ 85d7c584edee6b1c1e4a9b0a3a41bacb71332af3c41f3bb9dd059ff128808fc1              209 Release
+ 6d6db8ae1acfe64ce760b42f216da4d3e79ed64292c772aaa1831285a998e7ac             2118 main/binary-amd64/Packages
+ 0bdcf7fdd2315113e484f4ec2aaece01f567eb600a1d8b8132644e34a9ca95d3              699 main/binary-amd64/Packages.gz
+ 6d6db8ae1acfe64ce760b42f216da4d3e79ed64292c772aaa1831285a998e7ac             2118 main/binary-arm64/Packages
+ 0bdcf7fdd2315113e484f4ec2aaece01f567eb600a1d8b8132644e34a9ca95d3              699 main/binary-arm64/Packages.gz
+ 6d6db8ae1acfe64ce760b42f216da4d3e79ed64292c772aaa1831285a998e7ac             2118 main/binary-armhf/Packages
+ 0bdcf7fdd2315113e484f4ec2aaece01f567eb600a1d8b8132644e34a9ca95d3              699 main/binary-armhf/Packages.gz
+SHA512:
+ 2651481797a99786a4c4102117ec2de3a1fa5f87cda963c9c5bd37d815eb764cd63c937188c2f165328a6201aae3d05019a21084c08ef14587039feeb85e3029              209 Release
+ 2738422692fe96a1d8d05fe95b30c8835780017b990b816d3a00da5302becf51947851b1bd12b31677287ac3ba2df96cb1c7315d6fcd99aa327895a0e96832fa             2118 main/binary-amd64/Packages
+ bfd513b3f4d92c473c1b6f8448b1f94561d956b1e80adbace55b1c0f72cc75ef16c23299e841e97172d69f637496229b8f21d1d6e524788fa94791cbc74fb94d              699 main/binary-amd64/Packages.gz
+ 2738422692fe96a1d8d05fe95b30c8835780017b990b816d3a00da5302becf51947851b1bd12b31677287ac3ba2df96cb1c7315d6fcd99aa327895a0e96832fa             2118 main/binary-arm64/Packages
+ bfd513b3f4d92c473c1b6f8448b1f94561d956b1e80adbace55b1c0f72cc75ef16c23299e841e97172d69f637496229b8f21d1d6e524788fa94791cbc74fb94d              699 main/binary-arm64/Packages.gz
+ 2738422692fe96a1d8d05fe95b30c8835780017b990b816d3a00da5302becf51947851b1bd12b31677287ac3ba2df96cb1c7315d6fcd99aa327895a0e96832fa             2118 main/binary-armhf/Packages
+ bfd513b3f4d92c473c1b6f8448b1f94561d956b1e80adbace55b1c0f72cc75ef16c23299e841e97172d69f637496229b8f21d1d6e524788fa94791cbc74fb94d              699 main/binary-armhf/Packages.gz
