@@ -7,7 +7,7 @@
 
 **A native-feeling remote interface for [opencode](https://opencode.ai). Unofficial, independent, and a hobby project.**
 
-**Status:** `0.1.0` is the first public release. It is usable and tested, but expect hobby-project rough edges; please open an issue for anything that breaks.
+**Status:** `0.3.0` is the comfortable, responsive release. It is usable and tested, but expect hobby-project rough edges; please open an issue for anything that breaks.
 
 opencode keeps its own web app. opencode-tether is a separate, mobile-first client for it: SvelteKit + shadcn-svelte in the browser, Tauri on Android and the desktop, and an optional Rust host that serves the app and proxies the opencode API behind one login.
 
@@ -46,13 +46,14 @@ You can also point the app directly at an existing `opencode serve` instance. No
 - **Commands and shell** in the composer: `/command` and `!command`.
 - **Attachments**: images and files are sent as opencode file parts.
 - **Session management**: create, rename, delete, fork, summarize, share, copy a deep link.
+- **Folder picker**: browse and search the host's folders from home, then start new sessions in the chosen directory. Project worktrees and sandbox bookkeeping are no longer listed.
 - **Todos and changed files** in a side panel with expandable patches.
 - **Terminal** over opencode's PTY WebSocket, with resize and mobile keyboard support.
 - **Central remote manager**: named hosts, username/password or bearer key, default host, last-used host, per-host health, latency, opencode version, and busy sessions.
 - **Host mode**: when the Rust host serves the app, it knows it is the host, hides remote switching, and only asks for the host login.
 - **Native storage** for host credentials and settings on Android/desktop; browser local storage on the web.
 - **Updates**: Android APK downloads are manual; Flatpak updates go through the Flatpak remote; host updates use `opencode-tether update`; desktop packages are downloaded from releases.
-- **Responsive**: 320 px phones, 390 px phones, tablets, landscape phones, and wide desktops. Safe-area insets for Android system bars.
+- **Responsive and comfortable**: 320 px phones, 390 px phones, tablets, landscape phones, and wide desktops, with Claude-Code-sized controls (44 px touch targets), one left-side mobile menu, labelled Close buttons, and safe-area insets for Android system bars.
 
 Some opencode web features are still being bridged (for example MCP account flows, the full file tree, and every LSP surface). The core remote loop is complete and tested.
 
@@ -292,7 +293,7 @@ Screenshots live in [docs/screenshots](docs/screenshots). Details and commands a
 
 ## Releases
 
-Every push to `main` builds a pre-release (`v0.1.0-main.N`). Pushing a `v*` tag builds a stable release. Assets include host binaries for x86_64/aarch64/armv7, `.deb` and `.rpm` packages, an Android APK, a Flatpak bundle, and `SHA256SUMS`. Package repositories and the Flatpak remote are published to GitHub Pages.
+Every push to `main` builds a pre-release (`v0.3.0-main.N`). Pushing a `v*` tag builds a stable release. Assets include host binaries for x86_64/aarch64/armv7, `.deb` and `.rpm` packages, an Android APK, a Flatpak bundle, and `SHA256SUMS`. Package repositories and the Flatpak remote are published to GitHub Pages.
 
 See [docs/releases.md](docs/releases.md).
 

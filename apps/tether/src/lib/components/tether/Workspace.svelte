@@ -1,6 +1,5 @@
 <script lang="ts">
   import { app } from '$lib/state/app.svelte';
-  import { settings } from '$lib/state/settings.svelte';
   import SidebarContent from './SidebarContent.svelte';
   import ChatView from './ChatView.svelte';
   import SessionPanel from './SessionPanel.svelte';
@@ -16,13 +15,29 @@
   let panelOpen = $state(false);
   let panelSheetOpen = $state(false);
   let desktop = $state(true);
+  let wide = $state(true);
 
   $effect(() => {
-    const query = window.matchMedia('(min-width: 1024px)');
-    desktop = query.matches;
-    const onChange = (event: MediaQueryListEvent) => (desktop = event.matches);
-    query.addEventListener('change', onChange);
-    return () => query.removeEventListener('change', onChange);
+    const desktopQuery = window.matchMedia('(min-width: 1024px)');
+    const wideQuery = window.matchMedia('(min-width: 1280px)');
+    desktop = desktopQuery.matches;
+    wide = wideQuery.matches;
+    const sync = () => {
+      desktop = desktopQuery.matches;
+      wide = wideQuery.matches;
+      if (desktop) {
+        sidebarOpen = false;
+        panelSheetOpen = false;
+      } else {
+        panelOpen = false;
+      }
+    };
+    desktopQuery.addEventListener('change', sync);
+    wideQuery.addEventListener('change', sync);
+    return () => {
+      desktopQuery.removeEventListener('change', sync);
+      wideQuery.removeEventListener('change', sync);
+    };
   });
 
   function openSidebarBySwipe() {
@@ -32,7 +47,7 @@
   }
 
   function openPanel() {
-    if (desktop) panelOpen = !panelOpen;
+    if (wide) panelOpen = !panelOpen;
     else panelSheetOpen = true;
   }
 
@@ -41,7 +56,18 @@
     await tick();
   }
 
+  async function fromSidebar(open: () => void) {
+    sidebarOpen = false;
+    await tick();
+    open();
+  }
+
   function onKeydown(event: KeyboardEvent) {
+    if (event.key === 'Escape') {
+      sidebarOpen = false;
+      panelSheetOpen = false;
+      return;
+    }
     const mod = event.metaKey || event.ctrlKey;
     if (!mod) return;
     if (event.key.toLowerCase() === 'n') {
@@ -62,7 +88,7 @@
 <svelte:window onkeydown={onKeydown} />
 
 <div class="app-height flex w-full overflow-hidden bg-background">
-  <div class="hidden w-[288px] shrink-0 border-r border-border/60 lg:flex">
+  <div class="hidden w-[320px] shrink-0 border-r border-border/60 xl:w-[336px] lg:flex">
       <SidebarContent
         onOpenRemotes={() => (remotesOpen = true)}
         onOpenSettings={() => (settingsOpen = true)}
@@ -79,34 +105,33 @@
     />
   </main>
 
-  {#if desktop && panelOpen}
-    <div class="hidden w-[344px] shrink-0 lg:block">
+  {#if wide && panelOpen}
+    <div class="hidden w-[380px] shrink-0 xl:block 2xl:w-[420px]">
       <SessionPanel onClose={() => (panelOpen = false)} />
     </div>
   {/if}
 </div>
 
 <Sheet.Root bind:open={sidebarOpen}>
-  <Sheet.Content side="left" class="w-[86%] max-w-[330px] gap-0 border-r border-border/60 p-0">
+  <Sheet.Content side="left" showCloseButton={false} class="safe-x w-[92%] max-w-[400px] gap-0 border-r border-border/60 p-0 sm:max-w-[420px]">
+    <Sheet.Title class="sr-only">Sessions and navigation</Sheet.Title>
+    <Sheet.Description class="sr-only">Browse sessions, change the folder, or open settings and remotes.</Sheet.Description>
     <div class="h-full" use:swipe={{ onSwipeLeft: () => (sidebarOpen = false) }}>
       <SidebarContent
-        onOpenRemotes={() => {
-          sidebarOpen = false;
-          setTimeout(() => (remotesOpen = true), 160);
-        }}
-        onOpenSettings={() => {
-          sidebarOpen = false;
-          setTimeout(() => (settingsOpen = true), 160);
-        }}
+        onOpenRemotes={() => void fromSidebar(() => (remotesOpen = true))}
+        onOpenSettings={() => void fromSidebar(() => (settingsOpen = true))}
         onNavigate={() => (sidebarOpen = false)}
+        onClose={() => (sidebarOpen = false)}
       />
     </div>
   </Sheet.Content>
 </Sheet.Root>
 
 <Sheet.Root bind:open={panelSheetOpen}>
-  <Sheet.Content side="right" class="w-full max-w-full gap-0 p-0 sm:max-w-md">
-    <div class="h-full" use:swipe={{ onSwipeRight: () => (panelSheetOpen = false) }}>
+  <Sheet.Content side="left" showCloseButton={false} class="safe-x w-[92%] max-w-[420px] gap-0 border-r border-border/60 p-0 sm:max-w-[440px]">
+    <Sheet.Title class="sr-only">Session details</Sheet.Title>
+    <Sheet.Description class="sr-only">Todos and changed files for the current session.</Sheet.Description>
+    <div class="h-full" use:swipe={{ onSwipeLeft: () => (panelSheetOpen = false) }}>
       <SessionPanel onClose={() => (panelSheetOpen = false)} />
     </div>
   </Sheet.Content>

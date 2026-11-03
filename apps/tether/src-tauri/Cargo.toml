@@ -1,6 +1,6 @@
 [package]
 name = "opencode-tether"
-version = "0.2.0"
+version = "0.3.0"
 description = "Unofficial native remote interface for opencode"
 authors = ["opencode-tether contributors"]
 edition = "2021"

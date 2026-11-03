@@ -32,11 +32,11 @@
   </svg>
   {#if wordmark}
     <div class="min-w-0 leading-none">
-      <div class="flex items-baseline gap-0.5 text-[15px] font-semibold tracking-tight">
+      <div class="flex items-baseline gap-0.5 text-base font-semibold tracking-tight">
         <span>opencode</span><span class="text-tether">tether</span>
       </div>
       {#if tagline}
-        <div class="mt-1 text-[9.5px] font-medium uppercase tracking-[0.16em] text-muted-foreground">unofficial remote</div>
+        <div class="mt-1 hidden text-[10.5px] font-medium uppercase tracking-[0.16em] text-muted-foreground sm:block">unofficial remote</div>
       {/if}
     </div>
   {/if}

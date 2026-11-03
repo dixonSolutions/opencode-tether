@@ -4,7 +4,7 @@
 
 | Trigger | Version | GitHub release | Purpose |
 | --- | --- | --- | --- |
-| push to `main` | `0.1.0-main.<run>` | pre-release | latest development build |
+| push to `main` | `0.3.0-main.<run>` | pre-release | latest development build |
 | tag `v*` | tag without `v` | stable | recommended release |
 | manual dispatch | same as main | pre-release | rebuild |
 
@@ -45,7 +45,7 @@ repo/key.asc     optional signing key
 install.sh
 ```
 
-`apt update && apt upgrade` and `dnf upgrade` pick up new packages. Main pre-releases use the base package version (e.g. `0.1.0`), so package managers may not treat consecutive main builds as an upgrade. Stable tags use the tag version.
+`apt update && apt upgrade` and `dnf upgrade` pick up new packages. Main pre-releases use the base package version (e.g. `0.3.0`), so package managers may not treat consecutive main builds as an upgrade. Stable tags use the tag version.
 
 ### Android
 

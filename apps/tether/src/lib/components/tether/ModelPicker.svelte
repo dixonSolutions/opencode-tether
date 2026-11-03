@@ -56,85 +56,85 @@
     app.setModel({ providerID, modelID });
     open = false;
   }
-
-  function toggleFavorite(event: MouseEvent, key: string) {
-    event.stopPropagation();
-    settings.toggleFavoriteModel(key);
-  }
 </script>
 
 <Dialog.Root bind:open>
-  <Dialog.Content class="max-h-[78dvh] gap-0 overflow-hidden p-0 sm:max-w-lg">
-    <Dialog.Header class="border-b border-border/60 px-4 py-3">
-      <Dialog.Title class="text-sm">Model</Dialog.Title>
+  <Dialog.Content showCloseButton={false} class="flex max-h-[88dvh] flex-col gap-0 overflow-hidden p-0 sm:max-w-2xl">
+    <Dialog.Header class="border-b border-border/60 px-4 py-3.5 sm:px-5">
+      <Dialog.Title class="text-base">Model</Dialog.Title>
       <Dialog.Description class="sr-only">Choose the model opencode should use for this session.</Dialog.Description>
-      <div class="relative mt-2">
-        <Search class="absolute left-2.5 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
-        <Input bind:value={query} placeholder="Search models and providers" class="h-8 pl-8 text-xs" autofocus />
+      <div class="relative mt-2.5">
+        <Search class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+        <Input bind:value={query} placeholder="Search models and providers" class="h-11 pl-9 text-sm" autofocus />
       </div>
     </Dialog.Header>
-    <div class="tether-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-2">
+    <div class="tether-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain p-2.5 sm:p-3">
       {#if app.providersLoading && !app.providers}
         <div class="space-y-2 p-2">
-          {#each Array(6) as _}<Skeleton class="h-11 w-full rounded-lg" />{/each}
+          {#each Array(6) as _}<Skeleton class="h-14 w-full rounded-xl" />{/each}
         </div>
       {:else if grouped.length === 0}
-        <div class="px-4 py-10 text-center text-xs text-muted-foreground">No models match “{query}”.</div>
+        <div class="px-4 py-10 text-center text-sm text-muted-foreground">No models match “{query}”.</div>
       {:else}
         <button
           type="button"
-          class="mb-1 flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left text-xs text-muted-foreground hover:bg-muted"
+          class="mb-1 flex min-h-12 w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-sm text-muted-foreground hover:bg-muted"
           onclick={() => {
             app.selectedModel = null;
             settings.lastModel = null;
             open = false;
           }}
         >
-          <Sparkles class="size-3.5" /> Use server default
-          {#if !app.selectedModel}<Check class="ml-auto size-3.5 text-tether" />{/if}
+          <Sparkles class="size-4" /> Use server default
+          {#if !app.selectedModel}<Check class="ml-auto size-4 text-tether" />{/if}
         </button>
         {#each grouped as [providerID, models]}
           <div class="mt-2">
-            <div class="px-2.5 py-1 text-[9.5px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/60">{providerName(providerID)}</div>
+            <div class="px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground/60">{providerName(providerID)}</div>
             {#each models as model}
               {@const key = `${model.providerID}/${model.id}`}
               {@const selected = app.selectedModel?.providerID === model.providerID && app.selectedModel?.modelID === model.id}
-              <button
-                type="button"
-                class={cn(
-                  'group flex w-full items-center gap-2 rounded-lg px-2.5 py-2 text-left transition-colors hover:bg-muted',
-                  selected && 'bg-muted/60'
-                )}
-                onclick={() => choose(model.providerID, model.id)}
-              >
-                <span class="min-w-0 flex-1">
-                  <span class="flex items-center gap-1.5">
-                    <span class="truncate text-[12.5px] font-medium">{model.name ?? model.id}</span>
-                    {#if model.capabilities?.reasoning}<Brain class="size-3 shrink-0 text-violet-300/60" />{/if}
-                    {#if model.capabilities?.attachment}<Paperclip class="size-3 shrink-0 text-muted-foreground/50" />{/if}
+              {@const favorite = settings.favorites.includes(key)}
+              <div class={cn('group flex min-h-16 w-full items-center gap-1.5 rounded-xl px-1.5 py-1.5 transition-colors hover:bg-muted', selected && 'bg-muted/60')}>
+                <button
+                  type="button"
+                  class="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1.5 text-left"
+                  onclick={() => choose(model.providerID, model.id)}
+                >
+                  <span class="min-w-0 flex-1">
+                    <span class="flex items-center gap-1.5">
+                      <span class="truncate text-[15px] font-medium">{model.name ?? model.id}</span>
+                      {#if model.capabilities?.reasoning}<Brain class="size-4 shrink-0 text-violet-300/60" />{/if}
+                      {#if model.capabilities?.attachment}<Paperclip class="size-4 shrink-0 text-muted-foreground/50" />{/if}
+                    </span>
+                    <span class="mt-1 flex items-center gap-2 text-xs text-muted-foreground/60">
+                      <span class="truncate">{model.id}</span>
+                      {#if model.limit?.context}<span>· {Math.round(model.limit.context / 1000)}k ctx</span>{/if}
+                    </span>
                   </span>
-                  <span class="mt-0.5 flex items-center gap-1.5 text-[10px] text-muted-foreground/60">
-                    <span class="truncate">{model.id}</span>
-                    {#if model.limit?.context}<span>· {Math.round(model.limit.context / 1000)}k ctx</span>{/if}
-                  </span>
-                </span>
-                {#if settings.favorites.includes(key)}
-                  <Star class="size-3.5 text-tether" />
-                {:else}
-                  <span class="opacity-0 group-hover:opacity-100" role="presentation" onclick={(event) => toggleFavorite(event, key)}>
-                    <Star class="size-3.5 text-muted-foreground/60" />
-                  </span>
-                {/if}
-                {#if selected}<Check class="size-3.5 text-tether" />{/if}
-              </button>
+                  {#if selected}<Check class="size-4 text-tether" />{/if}
+                </button>
+                <button
+                  type="button"
+                  class="touch-visible grid size-10 shrink-0 place-items-center rounded-lg text-muted-foreground hover:bg-muted-foreground/10 hover:text-tether"
+                  aria-label={favorite ? `Remove ${model.name ?? model.id} from favorites` : `Favorite ${model.name ?? model.id}`}
+                  aria-pressed={favorite}
+                  onclick={(event) => {
+                    event.stopPropagation();
+                    settings.toggleFavoriteModel(key);
+                  }}
+                >
+                  <Star class={cn('size-4', favorite && 'fill-current text-tether')} />
+                </button>
+              </div>
             {/each}
           </div>
         {/each}
       {/if}
     </div>
-    <div class="flex items-center justify-between border-t border-border/60 px-4 py-2 text-[10px] text-muted-foreground/60">
+    <Dialog.Footer showCloseButton class="mx-0 mb-0 justify-between rounded-none border-t border-border/60 px-4 py-3 text-xs text-muted-foreground/60">
       <span>{app.modelCatalog.length} models</span>
       <span class="hidden sm:inline">Current: {app.selectedModel ? `${app.selectedModel.providerID}/${app.selectedModel.modelID}` : 'server default'}</span>
-    </div>
+    </Dialog.Footer>
   </Dialog.Content>
 </Dialog.Root>

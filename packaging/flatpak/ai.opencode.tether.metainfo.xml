@@ -39,6 +39,11 @@
     </screenshot>
   </screenshots>
   <releases>
+    <release version="0.3.0" date="2026-11-03">
+      <description>
+        <p>Comfortable, adaptive interface: larger controls and touch targets, one left-side mobile menu, clear Close buttons, and a rewritten folder picker that searches the host from home instead of listing worktrees. Adds Playwright UI coverage and a host-mode folder browser.</p>
+      </description>
+    </release>
     <release version="0.1.0" date="2026-10-29">
       <description>
         <p>First public release: remote management, host mode, live sessions, model and agent selection, permission prompts, and native Android and desktop builds.</p>

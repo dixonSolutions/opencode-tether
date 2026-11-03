@@ -19,7 +19,9 @@
 	data-slot="switch"
 	data-size={size}
 	class={cn(
-		"data-checked:bg-primary data-unchecked:bg-input focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:aria-invalid:border-destructive/50 dark:data-unchecked:bg-input/80 shrink-0 rounded-full border border-transparent focus-visible:ring-3 aria-invalid:ring-3 group-has-[:focus-visible]/field-label:ring-0 group-has-[:focus-visible]/field-label:border-transparent data-[size=default]:h-[18.4px] data-[size=default]:w-[32px] data-[size=sm]:h-[14px] data-[size=sm]:w-[24px] peer group/switch relative inline-flex items-center transition-all outline-none after:absolute after:-inset-x-3 after:-inset-y-2 data-disabled:cursor-not-allowed data-disabled:opacity-50",
+		"focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive focus-visible:ring-3 aria-invalid:ring-3 relative inline-flex shrink-0 cursor-pointer items-center rounded-full border border-transparent outline-none transition-colors disabled:cursor-not-allowed disabled:opacity-50",
+		size === "sm" ? "h-6 w-10" : "h-7 w-12",
+		checked ? "bg-primary" : "bg-muted-foreground/35 dark:bg-muted-foreground/30",
 		className
 	)}
 	{...restProps}
@@ -27,8 +29,9 @@
 	<SwitchPrimitive.Thumb
 		data-slot="switch-thumb"
 		class={cn(
-			"bg-background dark:data-unchecked:bg-foreground dark:data-checked:bg-primary-foreground rounded-full group-data-[size=default]/switch:size-4 group-data-[size=sm]/switch:size-3 group-data-[size=default]/switch:data-checked:translate-x-[calc(100%_-_2px)] group-data-[size=sm]/switch:data-checked:translate-x-[calc(100%_-_2px)] group-data-[size=default]/switch:data-unchecked:translate-x-0 group-data-[size=sm]/switch:data-unchecked:translate-x-0 pointer-events-none block ring-0 transition-transform",
-			"rtl:data-[state=checked]:translate-x-[calc(-100%)]"
+			"pointer-events-none block rounded-full bg-white shadow-sm ring-0 transition-transform",
+			size === "sm" ? "size-5" : "size-6",
+			checked ? (size === "sm" ? "translate-x-[18px]" : "translate-x-[22px]") : "translate-x-0.5"
 		)}
 	/>
 </SwitchPrimitive.Root>

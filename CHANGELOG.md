@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.3.0 — 2026-11-03
+
+Comfortable, adaptive UI release.
+
+- Raised typography and control sizes across the app; controls now meet 44 px touch targets on coarse pointers, with comfortable desktop sizing.
+- One left-side mobile menu for sessions, settings, remotes, and session details; every drawer has a labelled, reachable Close button.
+- Refreshed the shell for phones, tablets, landscape, and wide desktops, including a non-overlapping jump-to-latest button, safer composer wrapping, and safe-area padding.
+- Rewrote the project picker as a folder browser: starts at the host home, browses directories through opencode, searches subfolders, supports typed/absolute/`~` paths, and reports permission errors clearly.
+- Removed worktree and sandbox entries from directory selection; new sessions use the selected folder or the host default.
+- Added Playwright UI coverage (menus, close buttons, folder search and selection, touch targets, overflow) and wired it into CI.
+- Fixed settings switches, model favourite buttons, message action menus, markdown copy buttons, and streaming markdown performance.
+
+## 0.2.0 — 2026-11-03
+
+- Added project and directory selection, native swipe gestures, and Android notifications.
+- Used the opencode brand icon for Android and desktop.
+
 ## 0.1.0 — 2026-10-29
 
 First public build.

@@ -56,7 +56,7 @@
 
   const modelLabel = $derived(app.selectedModel ? app.selectedModel.modelID.split('/').pop() ?? app.selectedModel.modelID : 'default');
   const agentLabel = $derived(app.selectedAgent || 'build');
-  const directoryLabel = $derived(app.selectedDirectory ? projectName(app.selectedDirectory) : 'all projects');
+  const directoryLabel = $derived(app.selectedDirectory ? projectName(app.selectedDirectory) : 'host default');
 
   $effect(() => {
     const sessionID = app.selectedSessionId;
@@ -184,6 +184,10 @@
     attachments = attachments.filter((_, i) => i !== index);
   }
 
+  function openProject() {
+    projectOpen = true;
+  }
+
   function formatSize(bytes: number): string {
     return bytes < 1024 * 1024 ? `${Math.round(bytes / 1024)} KB` : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
   }
@@ -192,7 +196,7 @@
 <div
   role="region"
   aria-label="Message composer"
-  class="android-safe-bottom android-no-blur relative border-t border-border/60 bg-background/92 px-2.5 pt-2 backdrop-blur-xl sm:px-4 sm:pb-3"
+  class="safe-x android-safe-bottom android-no-blur relative border-t border-border/60 bg-background/92 px-2.5 pt-2 backdrop-blur-xl sm:px-4 sm:pb-3"
   ondragover={(event) => {
     event.preventDefault();
     dragging = true;
@@ -201,29 +205,29 @@
   ondrop={onDrop}
 >
   {#if slashMatches.length}
-    <div class="absolute bottom-[calc(100%-0.25rem)] left-2.5 right-2.5 z-20 overflow-hidden rounded-xl border border-border/80 bg-popover/98 p-1 shadow-2xl backdrop-blur-xl sm:left-4 sm:right-4">
-      <div class="flex items-center gap-1.5 px-2 py-1 text-[9px] font-semibold uppercase tracking-wider text-muted-foreground/60">
-        <CommandIcon class="size-3" /> Commands
+    <div class="absolute bottom-[calc(100%-0.35rem)] left-2.5 right-2.5 z-20 overflow-hidden rounded-2xl border border-border/80 bg-popover/98 p-1.5 shadow-2xl backdrop-blur-xl sm:left-4 sm:right-4">
+      <div class="flex items-center gap-2 px-3 py-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground/60">
+        <CommandIcon class="size-4" /> Commands
       </div>
       {#each slashMatches as command, i}
         <button
           type="button"
-          class={cn('flex w-full items-center gap-2 rounded-lg px-2 py-1.5 text-left', i === commandIndex ? 'bg-muted' : 'hover:bg-muted/60')}
+          class={cn('flex min-h-12 w-full items-center gap-2.5 rounded-xl px-3 py-2 text-left', i === commandIndex ? 'bg-muted' : 'hover:bg-muted/60')}
           onmouseenter={() => (commandIndex = i)}
           onclick={() => insertCommand(command.name)}
         >
           <span class="min-w-0 flex-1">
-            <span class="block truncate text-[12px] font-medium">/{command.name}</span>
-            {#if command.description}<span class="block truncate text-[10px] text-muted-foreground">{command.description}</span>{/if}
+            <span class="block truncate text-sm font-medium">/{command.name}</span>
+            {#if command.description}<span class="block truncate text-xs text-muted-foreground">{command.description}</span>{/if}
           </span>
-          <span class="text-[9px] uppercase tracking-wide text-muted-foreground/50">{command.source}</span>
+          <span class="text-[10px] uppercase tracking-wide text-muted-foreground/50">{command.source}</span>
         </button>
       {/each}
     </div>
   {/if}
 
   {#if dragging}
-    <div class="pointer-events-none absolute inset-2 z-30 grid place-items-center rounded-xl border-2 border-dashed border-tether/50 bg-background/85 text-xs font-medium text-tether">
+    <div class="pointer-events-none absolute inset-2 z-30 grid place-items-center rounded-xl border-2 border-dashed border-tether/50 bg-background/85 text-sm font-medium text-tether">
       Drop files to attach
     </div>
   {/if}
@@ -232,33 +236,33 @@
     {#if attachments.length}
       <div class="mb-2 flex flex-wrap gap-1.5">
         {#each attachments as attachment, index}
-          <div class="group flex max-w-[220px] items-center gap-1.5 rounded-lg border border-border/70 bg-card/70 py-1 pl-1.5 pr-1">
+          <div class="group flex max-w-[260px] items-center gap-2 rounded-xl border border-border/70 bg-card/70 py-1.5 pl-2 pr-1.5">
             {#if attachment.mime.startsWith('image/')}
-              <img src={attachment.url} alt="" class="size-7 rounded object-cover" />
+              <img src={attachment.url} alt="" class="size-9 rounded-lg object-cover" />
             {:else}
-              <span class="grid size-7 place-items-center rounded bg-muted text-muted-foreground"><FileText class="size-3.5" /></span>
+              <span class="grid size-9 place-items-center rounded-lg bg-muted text-muted-foreground"><FileText class="size-4" /></span>
             {/if}
             <span class="min-w-0 flex-1">
-              <span class="block truncate text-[10.5px] font-medium">{attachment.filename}</span>
-              <span class="block text-[9px] text-muted-foreground">{formatSize(attachment.size)}</span>
+              <span class="block truncate text-sm font-medium">{attachment.filename}</span>
+              <span class="block text-xs text-muted-foreground">{formatSize(attachment.size)}</span>
             </span>
-            <button type="button" class="rounded p-1 text-muted-foreground hover:bg-muted hover:text-foreground" onclick={() => removeAttachment(index)} aria-label="Remove attachment">
-              <X class="size-3" />
+            <button type="button" class="grid size-8 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" onclick={() => removeAttachment(index)} aria-label="Remove attachment">
+              <X class="size-4" />
             </button>
           </div>
         {/each}
       </div>
     {/if}
 
-    <div class="flex items-end gap-1.5 rounded-2xl border border-border/80 bg-card/65 p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-colors focus-within:border-tether/35 focus-within:bg-card/80">
+    <div class="flex items-end gap-1.5 rounded-2xl border border-border/80 bg-card/65 p-1.5 shadow-[0_8px_30px_rgba(0,0,0,0.12)] transition-colors focus-within:border-tether/35 focus-within:bg-card/80 sm:gap-2 sm:p-2">
       <button
         type="button"
-        class="mb-0.5 grid size-8 shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+        class="mb-0.5 grid size-10 shrink-0 place-items-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
         onclick={() => fileInput?.click()}
         aria-label="Attach files"
         title="Attach files"
       >
-        <Paperclip class="size-4" />
+        <Paperclip class="size-5" />
       </button>
       <input
         bind:this={fileInput}
@@ -287,68 +291,68 @@
         rows="1"
         enterkeyhint={settings.sendKey === 'enter' ? 'send' : 'enter'}
         placeholder={app.selectedSession ? 'Message opencode…' : 'Start a new session…'}
-        class="tether-scroll max-h-[34dvh] min-h-8 flex-1 resize-none bg-transparent px-1 py-1.5 text-[14px] leading-relaxed outline-none placeholder:text-muted-foreground/50"
+        class="tether-scroll max-h-[34dvh] min-h-11 flex-1 resize-none bg-transparent px-1.5 py-2 text-base leading-relaxed outline-none placeholder:text-muted-foreground/50 sm:px-2"
         aria-label="Message"
       ></textarea>
 
       <div class="mb-0.5 flex shrink-0 items-center gap-0.5">
         <button
           type="button"
-          class="hidden h-8 items-center gap-1.5 rounded-xl px-2 text-[10.5px] text-muted-foreground hover:bg-muted hover:text-foreground sm:flex"
-          onclick={() => (projectOpen = true)}
+          class="hidden h-10 items-center gap-1.5 rounded-xl px-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground sm:flex"
+          onclick={openProject}
           title="Project and directory"
         >
-          <Folder class="size-3.5" />
-          <span class="max-w-24 truncate">{directoryLabel}</span>
+          <Folder class="size-4" />
+          <span class="max-w-28 truncate">{directoryLabel}</span>
         </button>
         <button
           type="button"
-          class="hidden h-8 items-center gap-1.5 rounded-xl px-2 text-[10.5px] text-muted-foreground hover:bg-muted hover:text-foreground sm:flex"
+          class="hidden h-10 items-center gap-1.5 rounded-xl px-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground sm:flex"
           onclick={() => (agentOpen = true)}
           title="Agent"
         >
-          <Bot class="size-3.5" />
-          <span class="max-w-20 truncate">{agentLabel}</span>
+          <Bot class="size-4" />
+          <span class="max-w-24 truncate">{agentLabel}</span>
         </button>
         <button
           type="button"
-          class="hidden h-8 items-center gap-1.5 rounded-xl px-2 text-[10.5px] text-muted-foreground hover:bg-muted hover:text-foreground sm:flex"
+          class="hidden h-10 items-center gap-1.5 rounded-xl px-2.5 text-sm text-muted-foreground hover:bg-muted hover:text-foreground sm:flex"
           onclick={() => (modelOpen = true)}
           title="Model"
         >
-          <Cpu class="size-3.5" />
-          <span class="max-w-24 truncate">{modelLabel}</span>
+          <Cpu class="size-4" />
+          <span class="max-w-28 truncate">{modelLabel}</span>
         </button>
         {#if app.isBusy}
-          <Button size="icon-sm" variant="secondary" class="size-9 rounded-xl" onclick={() => app.abort()} aria-label="Stop generating" title="Stop">
-            <Square class="size-3.5 fill-current" />
+          <Button size="icon-sm" variant="secondary" class="size-11 rounded-xl" onclick={() => app.abort()} aria-label="Stop generating" title="Stop">
+            <Square class="size-4 fill-current" />
           </Button>
         {:else}
           <Button
             size="icon-sm"
-            class="size-9 rounded-xl bg-tether text-primary-foreground hover:bg-tether/85"
+            class="size-11 rounded-xl bg-tether text-primary-foreground hover:bg-tether/85"
             onclick={send}
             disabled={!text.trim() && attachments.length === 0}
             aria-label="Send message"
             title="Send"
           >
-            <ArrowUp class="size-4" />
+            <ArrowUp class="size-5" />
           </Button>
         {/if}
       </div>
     </div>
 
-    <div class="mt-1 flex items-center justify-between px-1 text-[9px] text-muted-foreground/40">
+    <div class="mt-1.5 flex items-center justify-between px-1 text-xs text-muted-foreground/45">
       <span class="hidden sm:inline">
         {settings.sendKey === 'enter' ? 'Enter to send · Shift+Enter for newline' : '⌘/Ctrl+Enter to send'}
         <span class="mx-1">·</span> / commands <span class="mx-1">·</span> ! shell
       </span>
-      <span class="sm:hidden">
-        <button type="button" class="rounded px-1 py-0.5 active:bg-muted" onclick={() => (modelOpen = true)}>{modelLabel}</button>
-        <span class="mx-0.5">·</span>
-        <button type="button" class="rounded px-1 py-0.5 active:bg-muted" onclick={() => (agentOpen = true)}>{agentLabel}</button>
-        <span class="mx-0.5">·</span>
-        <button type="button" class="rounded px-1 py-0.5 active:bg-muted" onclick={() => (projectOpen = true)}>{directoryLabel}</button>
+      <span class="flex min-w-0 items-center gap-0.5 overflow-hidden whitespace-nowrap sm:hidden">
+        <button type="button" class="max-w-[38%] truncate rounded-md px-2 py-1 active:bg-muted" onclick={() => (modelOpen = true)}>{modelLabel}</button>
+        <span class="mx-0.5 shrink-0">·</span>
+        <button type="button" class="max-w-[30%] truncate rounded-md px-2 py-1 active:bg-muted" onclick={() => (agentOpen = true)}>{agentLabel}</button>
+        <span class="mx-0.5 shrink-0">·</span>
+        <button type="button" class="max-w-[32%] truncate rounded-md px-2 py-1 active:bg-muted" onclick={openProject}>{directoryLabel}</button>
       </span>
       <span>{text.trim() ? `${text.trim().length} chars` : ''}</span>
     </div>

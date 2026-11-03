@@ -24,7 +24,7 @@
     ondelete: () => void;
   } = $props();
 
-  const ACTION_WIDTH = 120;
+  const ACTION_WIDTH = 168;
 
   let offset = $state(0);
   let dragging = $state(false);
@@ -96,31 +96,34 @@
   }
 </script>
 
-<div class="relative overflow-hidden rounded-lg" data-no-swipe>
-  <div class="absolute inset-y-0 right-0 flex" style:width="{ACTION_WIDTH}px">
+<div class="relative overflow-hidden rounded-xl" data-no-swipe>
+  <div
+    class={cn('absolute inset-y-0 right-0 flex transition-opacity lg:hidden', offset === 0 ? 'pointer-events-none opacity-0' : 'opacity-100')}
+    style:width="{ACTION_WIDTH}px"
+  >
     <button
       type="button"
-      class="flex flex-1 flex-col items-center justify-center gap-1 bg-muted text-[10px] font-medium text-foreground"
+      class="flex flex-1 flex-col items-center justify-center gap-1.5 bg-muted text-[13px] font-medium text-foreground"
       onclick={handleRename}
       aria-label="Rename session"
     >
-      <Pencil class="size-3.5" /> Rename
+      <Pencil class="size-4" /> Rename
     </button>
     <button
       type="button"
-      class="flex flex-1 flex-col items-center justify-center gap-1 bg-red-500 text-[10px] font-medium text-white"
+      class="flex flex-1 flex-col items-center justify-center gap-1.5 bg-red-500 text-[13px] font-medium text-white"
       onclick={handleDelete}
       aria-label="Delete session"
     >
-      <Trash2 class="size-3.5" /> Delete
+      <Trash2 class="size-4" /> Delete
     </button>
   </div>
 
   <div
     class={cn(
-      'group relative flex items-start gap-2 rounded-lg bg-sidebar px-2 py-2 touch-pan-y',
-      !dragging && 'transition-transform duration-200 ease-out',
-      active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'hover:bg-sidebar-accent/55'
+      'group relative flex min-h-16 items-start gap-2.5 rounded-xl px-3 py-2.5 touch-pan-y',
+      !dragging && 'transition-transform duration-150 ease-out',
+      active ? 'bg-sidebar-accent text-sidebar-accent-foreground' : 'bg-sidebar hover:bg-sidebar-accent/55'
     )}
     role="presentation"
     style:transform="translateX({offset}px)"
@@ -129,43 +132,43 @@
     onpointerup={onPointerUp}
     onpointercancel={onPointerCancel}
   >
-    <button type="button" class="absolute inset-0 z-20 rounded-lg" onclick={handleSelect} aria-label={`Open ${title}`}></button>
-    <span class="pointer-events-none relative z-10 mt-1.5 flex size-2 shrink-0 items-center justify-center">
+    <button type="button" class="absolute inset-0 z-20 rounded-xl" onclick={handleSelect} aria-label={`Open ${title}`}></button>
+    <span class="pointer-events-none relative z-10 mt-1.5 flex size-2.5 shrink-0 items-center justify-center">
       {#if busy}
-        <span class={cn('size-1.5 rounded-full', retry ? 'bg-amber-400' : 'live-dot bg-tether')}></span>
+        <span class={cn('size-2 rounded-full', retry ? 'bg-amber-400' : 'live-dot bg-tether')}></span>
       {:else if pending}
-        <span class="size-1.5 rounded-full bg-amber-400"></span>
+        <span class="size-2 rounded-full bg-amber-400"></span>
       {:else}
-        <span class="size-1.5 rounded-full bg-muted-foreground/20"></span>
+        <span class="size-2 rounded-full bg-muted-foreground/20"></span>
       {/if}
     </span>
     <span class="pointer-events-none relative z-10 min-w-0 flex-1">
-      <span class="flex items-center gap-1">
-        <span class={cn('truncate text-[12px] leading-5', active ? 'font-medium' : 'font-normal text-foreground/85')}>{title}</span>
+      <span class="flex items-center gap-1.5">
+        <span class={cn('truncate text-[15px] leading-6', active ? 'font-semibold' : 'font-normal text-foreground/90')}>{title}</span>
         {#if pending}
-          <span class="flex shrink-0 items-center gap-0.5 text-amber-400" title="Needs your attention">
-            {#if app.questions.some((item) => item.sessionID === session.id)}<MessageCircleQuestion class="size-2.5" />{:else}<ShieldAlert class="size-2.5" />{/if}
+          <span class="flex shrink-0 items-center gap-1 text-amber-400" title="Needs your attention">
+            {#if app.questions.some((item) => item.sessionID === session.id)}<MessageCircleQuestion class="size-3.5" />{:else}<ShieldAlert class="size-3.5" />{/if}
           </span>
         {/if}
       </span>
-      <span class="mt-0.5 flex items-center gap-1 text-[9.5px] leading-4 text-muted-foreground/60">
-        {#if directory}<span class="max-w-28 truncate">{directory}</span><span>·</span>{/if}
+      <span class="mt-0.5 flex items-center gap-1.5 text-xs leading-5 text-muted-foreground/65">
+        {#if directory}<span class="max-w-36 truncate">{directory}</span><span>·</span>{/if}
         <span>{relativeTime(session.time.updated)}</span>
         {#if session.cost}<span class="hidden sm:inline">· {formatCost(session.cost)}</span>{/if}
       </span>
     </span>
-    <div class="relative z-30 mt-0.5 hidden shrink-0 transition-opacity lg:block lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
+    <div class="touch-visible relative z-30 mt-0.5 hidden shrink-0 transition-opacity lg:block lg:opacity-0 lg:group-hover:opacity-100 lg:group-focus-within:opacity-100">
       <DropdownMenu.Root>
         <DropdownMenu.Trigger>
           {#snippet child({ props })}
-            <button class="grid size-6 place-items-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground" {...props} aria-label="Session actions">
-              <MoreHorizontal class="size-3.5" />
+            <button class="grid size-9 place-items-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground" {...props} aria-label="Session actions">
+              <MoreHorizontal class="size-4" />
             </button>
           {/snippet}
         </DropdownMenu.Trigger>
-        <DropdownMenu.Content align="end" class="w-40">
-          <DropdownMenu.Item onclick={onrename}><Pencil class="size-3.5" /> Rename</DropdownMenu.Item>
-          <DropdownMenu.Item onclick={ondelete} class="text-red-400"><Trash2 class="size-3.5" /> Delete</DropdownMenu.Item>
+        <DropdownMenu.Content align="end" class="w-48">
+          <DropdownMenu.Item onclick={onrename}><Pencil class="size-4" /> Rename</DropdownMenu.Item>
+          <DropdownMenu.Item onclick={ondelete} class="text-red-400"><Trash2 class="size-4" /> Delete</DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Root>
     </div>

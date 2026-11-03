@@ -111,13 +111,13 @@
 >
   <button
     type="button"
-    class="flex w-full items-start gap-2.5 px-3 py-2.5 text-left"
+    class="flex min-h-14 w-full items-start gap-3 px-3.5 py-3 text-left"
     onclick={() => (expanded = !expanded)}
     aria-expanded={expanded}
   >
     <span
       class={cn(
-        'mt-0.5 grid size-6 shrink-0 place-items-center rounded-md border',
+        'mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg border',
         status === 'error'
           ? 'border-red-500/20 bg-red-500/10 text-red-400'
           : status === 'running'
@@ -126,57 +126,57 @@
       )}
     >
       {#if status === 'running'}
-        <Loader2 class="size-3.5 animate-spin" />
+        <Loader2 class="size-4 animate-spin" />
       {:else if status === 'error'}
-        <CircleX class="size-3.5" />
+        <CircleX class="size-4" />
       {:else}
         {@const Icon = icon}
-        <Icon class="size-3.5" />
+        <Icon class="size-4" />
       {/if}
     </span>
     <span class="min-w-0 flex-1">
       <span class="flex items-center gap-1.5">
-        <span class="truncate text-[13px] font-medium leading-5">{summary}</span>
+        <span class="truncate text-[15px] font-medium leading-6">{summary}</span>
         {#if status === 'completed'}
-          <CircleCheck class="size-3 shrink-0 text-emerald-400/80" />
+          <CircleCheck class="size-3.5 shrink-0 text-emerald-400/80" />
         {/if}
       </span>
       {#if subtitle}
-        <span class="mt-0.5 block truncate font-mono text-[10.5px] leading-4 text-muted-foreground">{subtitle}</span>
+        <span class="mt-1 block truncate font-mono text-xs leading-4 text-muted-foreground">{subtitle}</span>
       {/if}
-      <span class="mt-0.5 flex items-center gap-2 text-[10px] uppercase tracking-wide text-muted-foreground/70">
+      <span class="mt-1 flex items-center gap-2 text-[11px] uppercase tracking-wide text-muted-foreground/70">
         <span>{part.tool}</span>
         {#if duration > 0}<span>· {formatDuration(duration)}</span>{/if}
         {#if status === 'error'}<span class="text-red-400/80">· failed</span>{/if}
       </span>
     </span>
-    <ChevronRight class={cn('mt-1 size-3.5 shrink-0 text-muted-foreground/50 transition-transform', expanded && 'rotate-90')} />
+    <ChevronRight class={cn('mt-1 size-4 shrink-0 text-muted-foreground/50 transition-transform', expanded && 'rotate-90')} />
   </button>
 
   {#if expanded}
-    <div class="border-t border-border/60 bg-background/30 px-3 py-2.5">
+    <div class="border-t border-border/60 bg-background/30 px-3.5 py-3">
       {#if status === 'error'}
-        <div class="mb-2 rounded-lg border border-red-500/20 bg-red-500/[0.06] p-2 font-mono text-[11px] leading-relaxed text-red-300/90 whitespace-pre-wrap break-words">
+        <div class="mb-2 rounded-xl border border-red-500/20 bg-red-500/[0.06] p-3 font-mono text-xs leading-relaxed text-red-300/90 whitespace-pre-wrap break-words">
           {outputPreview}
         </div>
       {:else if output}
         <div class="relative mb-2">
-          <pre class="max-h-72 overflow-auto rounded-lg border border-border/60 bg-code p-2.5 font-mono text-[11px] leading-relaxed whitespace-pre-wrap break-words text-foreground/85">{outputPreview}</pre>
+          <pre class="max-h-80 overflow-auto rounded-xl border border-border/60 bg-code p-3 font-mono text-xs leading-relaxed whitespace-pre-wrap break-words text-foreground/85">{outputPreview}</pre>
           <button
             type="button"
-            class="absolute right-1.5 top-1.5 grid size-6 place-items-center rounded-md border border-border/70 bg-background/85 text-muted-foreground hover:text-foreground"
+            class="absolute right-2 top-2 grid size-9 place-items-center rounded-lg border border-border/70 bg-background/85 text-muted-foreground hover:text-foreground"
             onclick={copyOutput}
             aria-label="Copy output"
           >
-            {#if copied}<Check class="size-3" />{:else}<Copy class="size-3" />{/if}
+            {#if copied}<Check class="size-4" />{:else}<Copy class="size-4" />{/if}
           </button>
         </div>
       {/if}
       <details class="group/input">
-        <summary class="cursor-pointer list-none text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground">
+        <summary class="cursor-pointer list-none py-1 text-xs font-medium uppercase tracking-wider text-muted-foreground/70 hover:text-muted-foreground">
           Input
         </summary>
-        <pre class="mt-1.5 max-h-56 overflow-auto rounded-lg border border-border/50 bg-code/60 p-2.5 font-mono text-[10.5px] leading-relaxed text-muted-foreground">{inputJson}</pre>
+        <pre class="mt-2 max-h-56 overflow-auto rounded-xl border border-border/50 bg-code/60 p-3 font-mono text-xs leading-relaxed text-muted-foreground">{inputJson}</pre>
       </details>
     </div>
   {/if}

@@ -41,6 +41,9 @@ apps/tether/src-tauri/gen/android/app/src/main/res/values/tauri.properties
 
 # Local config and screenshots under test
 /tmp/
+apps/tether/test-results/
+apps/tether/playwright-report/
+apps/tether/blob-report/
 
 # Editor/agent settings
 .claude/

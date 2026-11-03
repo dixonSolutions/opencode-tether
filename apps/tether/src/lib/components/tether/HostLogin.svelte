@@ -34,17 +34,17 @@
   <div class="pointer-events-none absolute inset-x-0 top-0 h-[420px] bg-[radial-gradient(ellipse_at_top,rgba(250,178,131,0.12),transparent_65%)]"></div>
   <header class="android-safe-top relative z-10 flex items-center justify-between px-4 pb-2 pt-5 sm:px-8">
     <Brand size={32} wordmark tagline />
-    <span class="rounded-full border border-tether/20 bg-tether/[0.06] px-2 py-1 text-[8.5px] font-medium uppercase tracking-[0.14em] text-tether">host mode</span>
+    <span class="rounded-full border border-tether/20 bg-tether/[0.06] px-2 py-1 text-xs font-medium uppercase tracking-[0.14em] text-tether">host mode</span>
   </header>
 
   <main class="relative z-10 mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-8">
     <div class="text-center">
       <span class="mx-auto grid size-11 place-items-center rounded-2xl border border-tether/20 bg-tether/[0.06] text-tether"><Lock class="size-5" /></span>
-      <h1 class="mt-3 text-balance text-[22px] font-semibold tracking-[-0.02em]">Sign in to this host</h1>
-      <p class="mt-1 text-[11px] leading-relaxed text-muted-foreground">
+      <h1 class="mt-3 text-balance text-[26px] font-semibold tracking-[-0.02em]">Sign in to this host</h1>
+      <p class="mt-1 text-sm leading-relaxed text-muted-foreground">
         This page is served by opencode-tether. Use the host credentials configured on the server.
       </p>
-      <div class="mt-2 flex items-center justify-center gap-1.5 text-[9px] text-muted-foreground/50">
+      <div class="mt-2 flex items-center justify-center gap-1.5 text-sm text-muted-foreground/50">
         <span class="size-1 rounded-full bg-emerald-400"></span>
         {window.location.host}
         {#if app.host?.upstream.version}<span>· opencode {app.host.upstream.version}</span>{/if}
@@ -60,32 +60,32 @@
       }}
     >
       <div class="space-y-1">
-        <Label for="host-user" class="text-[10px]">Username</Label>
-        <Input id="host-user" bind:value={username} autocapitalize="none" autocomplete="username" class="h-9 text-[12px]" autofocus />
+        <Label for="host-user" class="text-xs">Username</Label>
+        <Input id="host-user" bind:value={username} autocapitalize="none" autocomplete="username" class="h-11 text-sm" autofocus />
       </div>
       <div class="space-y-1">
-        <Label for="host-pass" class="text-[10px]">Password</Label>
+        <Label for="host-pass" class="text-xs">Password</Label>
         <div class="relative">
-          <Input id="host-pass" bind:value={password} type={showSecret ? 'text' : 'password'} autocomplete="current-password" class="h-9 pr-8 text-[12px]" />
-          <button type="button" class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground" onclick={() => (showSecret = !showSecret)} aria-label="Toggle password visibility">
-            {#if showSecret}<EyeOff class="size-3.5" />{:else}<Eye class="size-3.5" />{/if}
+          <Input id="host-pass" bind:value={password} type={showSecret ? 'text' : 'password'} autocomplete="current-password" class="h-11 pr-12 text-sm" />
+          <button type="button" class="absolute right-1 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground hover:text-foreground" onclick={() => (showSecret = !showSecret)} aria-label="Toggle password visibility">
+            {#if showSecret}<EyeOff class="size-4" />{:else}<Eye class="size-4" />{/if}
           </button>
         </div>
       </div>
       {#if error}
-        <div class="flex items-start gap-1.5 rounded-lg border border-red-500/20 bg-red-500/[0.05] px-2 py-1.5 text-[10px] leading-relaxed text-red-300/90">
-          <CircleAlert class="mt-0.5 size-3 shrink-0" /> <span>{error}</span>
+        <div class="flex items-start gap-1.5 rounded-lg border border-red-500/20 bg-red-500/[0.05] px-2 py-1.5 text-xs leading-relaxed text-red-300/90">
+          <CircleAlert class="mt-0.5 size-4 shrink-0" /> <span>{error}</span>
         </div>
       {/if}
-      <Button type="submit" class="h-9 w-full gap-1.5 bg-tether text-[12px] font-semibold text-primary-foreground hover:bg-tether/85" disabled={busy}>
-        {#if busy}<Loader2 class="size-3.5 animate-spin" />{:else}<ArrowRight class="size-3.5" />{/if}
+      <Button type="submit" class="h-11 w-full gap-1.5 bg-tether text-sm font-semibold text-primary-foreground hover:bg-tether/85" disabled={busy}>
+        {#if busy}<Loader2 class="size-4 animate-spin" />{:else}<ArrowRight class="size-4" />{/if}
         {busy ? 'Signing in…' : 'Sign in'}
       </Button>
-      <p class="text-center text-[9px] leading-relaxed text-muted-foreground/45">Credentials are stored locally on this device for one-tap access.</p>
+      <p class="text-center text-sm leading-relaxed text-muted-foreground/45">Credentials are stored locally on this device for one-tap access.</p>
     </form>
   </main>
 
-  <footer class="android-safe-bottom relative z-10 px-4 pb-4 text-center text-[8.5px] text-muted-foreground/35">
+  <footer class="android-safe-bottom relative z-10 px-4 pb-4 text-center text-xs text-muted-foreground/35">
     opencode-tether · unofficial opencode remote
   </footer>
 </div>

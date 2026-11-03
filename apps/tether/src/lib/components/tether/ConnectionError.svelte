@@ -28,20 +28,20 @@
   <div class="pointer-events-none absolute inset-x-0 top-0 h-[380px] bg-[radial-gradient(ellipse_at_top,rgba(250,178,131,0.08),transparent_65%)]"></div>
   <header class="android-safe-top relative z-10 flex items-center justify-between px-4 pt-5 sm:px-8">
     <Brand size={30} wordmark tagline />
-    <span class="text-[9px] text-muted-foreground/40">{app.hostMode ? 'host mode' : 'remote mode'}</span>
+    <span class="text-sm text-muted-foreground/40">{app.hostMode ? 'host mode' : 'remote mode'}</span>
   </header>
   <main class="relative z-10 mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-4 py-8 text-center">
     <span class="mx-auto grid size-12 place-items-center rounded-2xl border border-red-500/20 bg-red-500/[0.06] text-red-300">
       {#if app.phase === 'unauthorized'}<ShieldX class="size-5" />{:else}<WifiOff class="size-5" />{/if}
     </span>
-    <h1 class="mt-3 text-[20px] font-semibold tracking-tight">
+    <h1 class="mt-3 text-[24px] font-semibold tracking-tight">
       {#if app.phase === 'unauthorized'}
         Authentication failed
       {:else}
         Can't reach this host
       {/if}
     </h1>
-    <p class="mx-auto mt-1 max-w-xs text-[11px] leading-relaxed text-muted-foreground">
+    <p class="mx-auto mt-1 max-w-xs text-sm leading-relaxed text-muted-foreground">
       {#if app.phase === 'unauthorized'}
         The host rejected the saved credentials. Update the host or re-enter your password.
       {:else}
@@ -53,35 +53,35 @@
       <div class="flex items-center gap-2">
         <StatusDot state="offline" size={7} />
         <span class="min-w-0 flex-1">
-          <span class="block truncate text-[11.5px] font-medium">{app.hostMode ? 'this host' : (app.activeRemote?.name ?? 'unknown host')}</span>
-          <span class="block truncate font-mono text-[9px] text-muted-foreground/60">{app.hostMode ? window.location.origin : (app.activeRemote?.url ?? '')}</span>
+          <span class="block truncate text-sm font-medium">{app.hostMode ? 'this host' : (app.activeRemote?.name ?? 'unknown host')}</span>
+          <span class="block truncate font-mono text-sm text-muted-foreground/60">{app.hostMode ? window.location.origin : (app.activeRemote?.url ?? '')}</span>
         </span>
       </div>
       {#if app.lastError || app.connection.error}
-        <div class="mt-1.5 border-t border-border/40 pt-1.5 text-[9.5px] leading-relaxed text-red-300/70">{app.lastError ?? app.connection.error}</div>
+        <div class="mt-1.5 border-t border-border/40 pt-1.5 text-xs leading-relaxed text-red-300/70">{app.lastError ?? app.connection.error}</div>
       {/if}
     </div>
 
     <div class="mt-4 flex flex-col gap-1.5">
-      <Button class="h-9 gap-1.5 text-[12px]" onclick={retry} disabled={retrying}>
-        {#if retrying}<span class="size-3 animate-spin rounded-full border border-current border-t-transparent"></span>{:else}<RefreshCw class="size-3.5" />{/if}
+      <Button class="h-11 gap-1.5 text-sm" onclick={retry} disabled={retrying}>
+        {#if retrying}<span class="size-4 animate-spin rounded-full border border-current border-t-transparent"></span>{:else}<RefreshCw class="size-4" />{/if}
         Try again
       </Button>
       {#if !app.hostMode}
-        <Button variant="outline" class="h-9 gap-1.5 text-[12px]" onclick={() => (remotesOpen = true)}>
-          <Server class="size-3.5" /> Edit host or credentials
+        <Button variant="outline" class="h-11 gap-1.5 text-sm" onclick={() => (remotesOpen = true)}>
+          <Server class="size-4" /> Edit host or credentials
         </Button>
-        <Button variant="ghost" class="h-8 gap-1 text-[10.5px] text-muted-foreground" onclick={chooseAnother}>
-          <ArrowLeft class="size-3" /> Choose another host
+        <Button variant="ghost" class="h-10 gap-1 text-[13px] text-muted-foreground" onclick={chooseAnother}>
+          <ArrowLeft class="size-4" /> Choose another host
         </Button>
       {:else}
-        <Button variant="ghost" class="h-8 gap-1 text-[10.5px] text-muted-foreground" onclick={() => location.reload()}>
-          <RefreshCw class="size-3" /> Reload host
+        <Button variant="ghost" class="h-10 gap-1 text-[13px] text-muted-foreground" onclick={() => location.reload()}>
+          <RefreshCw class="size-4" /> Reload host
         </Button>
       {/if}
     </div>
   </main>
-  <footer class="android-safe-bottom relative z-10 px-4 pb-4 text-center text-[8.5px] text-muted-foreground/30">
+  <footer class="android-safe-bottom relative z-10 px-4 pb-4 text-center text-xs text-muted-foreground/30">
     opencode-tether · check the host service, port, and credentials
   </footer>
 </div>

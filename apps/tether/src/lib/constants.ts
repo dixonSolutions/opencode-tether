@@ -1,5 +1,5 @@
 export const APP_NAME = 'opencode-tether';
-export const APP_VERSION = '0.1.0';
+export const APP_VERSION = '0.3.0';
 export const REPO = 'dixonSolutions/opencode-tether';
 export const GITHUB_URL = `https://github.com/${REPO}`;
 export const RELEASES_URL = `${GITHUB_URL}/releases`;

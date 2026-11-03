@@ -4,7 +4,7 @@
   import hljs from 'highlight.js/lib/common';
   import { copyText, openExternal } from '$lib/platform';
 
-  let { text = '', class: className = '' }: { text?: string; class?: string } = $props();
+  let { text = '', class: className = '', streaming = false }: { text?: string; class?: string; streaming?: boolean } = $props();
 
   const marked = new Marked({
     gfm: true,
@@ -13,10 +13,15 @@
       code({ text, lang }) {
         const language = (lang ?? '').split(/\s+/)[0];
         let highlighted = '';
-        try {
-          highlighted = language && hljs.getLanguage(language) ? hljs.highlight(text, { language }).value : hljs.highlightAuto(text).value;
-        } catch {
-          highlighted = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        if (!streaming) {
+          try {
+            highlighted = language && hljs.getLanguage(language) ? hljs.highlight(text, { language }).value : hljs.highlightAuto(text).value;
+          } catch {
+            highlighted = escaped;
+          }
+        } else {
+          highlighted = escaped;
         }
         return `<pre data-lang="${language}"><code class="hljs">${highlighted}</code></pre>`;
       }
@@ -25,9 +30,11 @@
 
   let container: HTMLDivElement;
   let html = $state('');
+  let lastRender = 0;
+  let pending: string | null = null;
+  let renderTimer: ReturnType<typeof setTimeout> | null = null;
 
-  $effect(() => {
-    const source = text ?? '';
+  function render(source: string) {
     let rendered = '';
     try {
       rendered = marked.parse(source, { async: false }) as string;
@@ -38,6 +45,41 @@
       ADD_ATTR: ['target', 'rel', 'data-lang'],
       FORBID_TAGS: ['script', 'style', 'iframe', 'object', 'embed']
     });
+  }
+
+  $effect(() => {
+    const source = text ?? '';
+    if (!streaming) {
+      if (renderTimer) clearTimeout(renderTimer);
+      renderTimer = null;
+      pending = null;
+      render(source);
+      lastRender = performance.now();
+      return;
+    }
+    const now = performance.now();
+    if (now - lastRender >= 70) {
+      render(source);
+      lastRender = now;
+      return;
+    }
+    pending = source;
+    if (renderTimer) return;
+    renderTimer = setTimeout(() => {
+      renderTimer = null;
+      const next = pending;
+      pending = null;
+      if (next !== null) {
+        render(next);
+        lastRender = performance.now();
+      }
+    }, 70);
+  });
+
+  $effect(() => {
+    return () => {
+      if (renderTimer) clearTimeout(renderTimer);
+    };
   });
 
   $effect(() => {
@@ -92,12 +134,12 @@
     background: color-mix(in oklch, var(--background) 82%, transparent);
     color: var(--muted-foreground);
     font-family: var(--font-sans);
-    font-size: 10px;
+    font-size: 12px;
     font-weight: 600;
-    letter-spacing: 0.03em;
+    letter-spacing: 0.02em;
     text-transform: uppercase;
-    border-radius: 5px;
-    padding: 3px 7px;
+    border-radius: 7px;
+    padding: 8px 11px;
     opacity: 0;
     transition: opacity 120ms ease;
     cursor: pointer;
@@ -105,6 +147,11 @@
   :global(.md pre:hover .md-copy),
   :global(.md pre .md-copy:focus-visible) {
     opacity: 1;
+  }
+  @media (hover: none) {
+    :global(.md pre .md-copy) {
+      opacity: 1;
+    }
   }
   :global(.md pre .md-copy:hover) {
     color: var(--foreground);

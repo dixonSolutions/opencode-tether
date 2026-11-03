@@ -112,19 +112,19 @@
 </script>
 
 <Dialog.Root bind:open>
-  <Dialog.Content class="max-h-[88dvh] overflow-y-auto tether-scroll sm:max-w-md">
+  <Dialog.Content class="max-h-[92dvh] overflow-y-auto tether-scroll sm:max-w-lg">
     <Dialog.Header>
-      <Dialog.Title class="flex items-center gap-2 text-sm">
-        <Server class="size-4 text-tether" /> {remote ? 'Edit host' : 'Add opencode host'}
+      <Dialog.Title class="flex items-center gap-2 text-base">
+        <Server class="size-5 text-tether" /> {remote ? 'Edit host' : 'Add opencode host'}
       </Dialog.Title>
-      <Dialog.Description class="text-[11.5px] leading-relaxed text-muted-foreground">
+      <Dialog.Description class="text-sm leading-relaxed text-muted-foreground">
         Connect to an opencode server, or to a machine running the opencode-tether host. Credentials are stored in this app's storage.
       </Dialog.Description>
     </Dialog.Header>
 
     <div class="space-y-3">
       <div class="space-y-1.5">
-        <Label for="remote-url" class="text-[11px]">Host address</Label>
+        <Label for="remote-url" class="text-sm">Host address</Label>
         <Input
           id="remote-url"
           bind:value={url}
@@ -132,32 +132,33 @@
           inputmode="url"
           autocapitalize="none"
           spellcheck={false}
-          class="h-9 font-mono text-[12px]"
+          class="h-11 font-mono text-sm"
           oninput={() => {
             testResult = null;
             error = null;
           }}
         />
-        <p class="text-[9.5px] leading-relaxed text-muted-foreground/60">
+        <p class="text-xs leading-relaxed text-muted-foreground/60">
           Use the address of <code class="font-mono">opencode serve</code> or an opencode-tether host. HTTP is assumed for localhost and IP addresses.
         </p>
       </div>
 
       <div class="space-y-1.5">
-        <Label for="remote-name" class="text-[11px]">Name <span class="font-normal text-muted-foreground/60">(optional)</span></Label>
-        <Input id="remote-name" bind:value={name} placeholder="Workstation" class="h-9 text-[12px]" />
+        <Label for="remote-name" class="text-sm">Name <span class="font-normal text-muted-foreground/60">(optional)</span></Label>
+        <Input id="remote-name" bind:value={name} placeholder="Workstation" class="h-11 text-sm" />
       </div>
 
       <div class="space-y-1.5">
-        <Label class="text-[11px]">Authentication</Label>
+        <Label class="text-sm">Authentication</Label>
         <div class="grid grid-cols-3 gap-1 rounded-lg border border-border/60 bg-muted/30 p-0.5">
           {#each [['password', 'Password'], ['token', 'API key'], ['none', 'None']] as [value, label]}
             <button
               type="button"
               class={cn(
-                'rounded-md px-2 py-1.5 text-[10.5px] font-medium transition-colors',
+                'min-h-10 rounded-lg px-2 py-2 text-sm font-medium transition-colors',
                 authMode === value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
               )}
+              aria-pressed={authMode === value}
               onclick={() => {
                 authMode = value as AuthMode;
                 testResult = null;
@@ -172,41 +173,41 @@
       {#if authMode === 'password'}
         <div class="grid grid-cols-2 gap-2">
           <div class="space-y-1.5">
-            <Label for="remote-username" class="text-[11px]">Username</Label>
-            <Input id="remote-username" bind:value={username} autocapitalize="none" autocomplete="username" class="h-9 text-[12px]" />
+            <Label for="remote-username" class="text-sm">Username</Label>
+            <Input id="remote-username" bind:value={username} autocapitalize="none" autocomplete="username" class="h-11 text-sm" />
           </div>
           <div class="space-y-1.5">
-            <Label for="remote-password" class="text-[11px]">Password</Label>
+            <Label for="remote-password" class="text-sm">Password</Label>
             <div class="relative">
               <Input
                 id="remote-password"
                 bind:value={password}
                 type={showSecret ? 'text' : 'password'}
                 autocomplete="current-password"
-                class="h-9 pr-8 text-[12px]"
+                class="h-11 pr-12 text-sm"
               />
               <button
                 type="button"
-                class="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                class="absolute right-3 top-1/2 grid size-8 -translate-y-1/2 place-items-center rounded-md text-muted-foreground hover:text-foreground"
                 onclick={() => (showSecret = !showSecret)}
                 aria-label={showSecret ? 'Hide password' : 'Show password'}
               >
-                {#if showSecret}<EyeOff class="size-3.5" />{:else}<Eye class="size-3.5" />{/if}
+                {#if showSecret}<EyeOff class="size-4" />{:else}<Eye class="size-4" />{/if}
               </button>
             </div>
           </div>
         </div>
       {:else if authMode === 'token'}
         <div class="space-y-1.5">
-          <Label for="remote-token" class="text-[11px]">API key or bearer token</Label>
-          <Input id="remote-token" bind:value={token} type={showSecret ? 'text' : 'password'} autocapitalize="none" class="h-9 font-mono text-[12px]" />
+          <Label for="remote-token" class="text-sm">API key or bearer token</Label>
+          <Input id="remote-token" bind:value={token} type={showSecret ? 'text' : 'password'} autocapitalize="none" class="h-11 font-mono text-sm" />
         </div>
       {/if}
 
       {#if testResult}
         <div
           class={cn(
-            'flex items-start gap-2 rounded-lg border px-2.5 py-2 text-[10.5px]',
+            'flex items-start gap-2.5 rounded-xl border px-3 py-2.5 text-sm',
             testResult.state === 'offline' || testResult.state === 'unauthorized'
               ? 'border-red-500/20 bg-red-500/[0.05] text-red-300'
               : 'border-emerald-500/20 bg-emerald-500/[0.05] text-emerald-200/90'
@@ -216,11 +217,11 @@
           <div class="min-w-0 flex-1">
             <div class="flex items-center gap-1.5 font-medium">
               {#if testResult.state === 'offline'}
-                <AlertCircle class="size-3" /> Unreachable
+                <AlertCircle class="size-4" /> Unreachable
               {:else if testResult.state === 'unauthorized'}
-                <AlertCircle class="size-3" /> Authentication failed
+                <AlertCircle class="size-4" /> Authentication failed
               {:else}
-                <Check class="size-3" /> Connected{testResult.version ? ` · opencode ${testResult.version}` : ''}
+                <Check class="size-4" /> Connected{testResult.version ? ` · opencode ${testResult.version}` : ''}
               {/if}
               {#if testResult.latencyMs}<span class="font-normal opacity-70"> · {testResult.latencyMs}ms</span>{/if}
             </div>
@@ -231,22 +232,22 @@
       {/if}
 
       {#if error && !testResult}
-        <div class="flex items-start gap-1.5 text-[10.5px] text-red-300"><AlertCircle class="mt-0.5 size-3" /> {error}</div>
+        <div class="flex items-start gap-2 text-sm text-red-300"><AlertCircle class="mt-0.5 size-4" /> {error}</div>
       {/if}
 
-      <div class="rounded-lg border border-border/50 bg-muted/20 px-2.5 py-2 text-[9.5px] leading-relaxed text-muted-foreground/60">
+      <div class="rounded-xl border border-border/50 bg-muted/20 px-3 py-2.5 text-xs leading-relaxed text-muted-foreground/60">
         Passwords and keys are saved locally for one-tap reconnects. On mobile and desktop they live in the native app store; in a browser they live in local storage. Use the tether host and HTTPS for remote access.
       </div>
     </div>
 
     <Dialog.Footer class="mt-1 flex-row items-center justify-between gap-2">
-      <Button variant="outline" size="sm" class="h-8 text-[11px]" onclick={test} disabled={testing || !url.trim()}>
-        {#if testing}<Loader2 class="size-3 animate-spin" />{:else}<StatusDot state={testResult?.state ?? 'unknown'} size={6} />{/if}
+      <Button variant="outline" size="sm" class="h-11 text-sm" onclick={test} disabled={testing || !url.trim()}>
+        {#if testing}<Loader2 class="size-4 animate-spin" />{:else}<StatusDot state={testResult?.state ?? 'unknown'} size={7} />{/if}
         Test connection
       </Button>
       <div class="flex items-center gap-1.5">
-        <Button variant="ghost" size="sm" class="h-8 text-[11px]" onclick={() => (open = false)}>Cancel</Button>
-        <Button size="sm" class="h-8 text-[11px]" onclick={() => save(true)} disabled={!url.trim()}>Save & connect</Button>
+        <Button variant="ghost" size="sm" class="h-11 text-sm" onclick={() => (open = false)}>Cancel</Button>
+        <Button size="sm" class="h-11 text-sm" onclick={() => save(true)} disabled={!url.trim()}>Save & connect</Button>
       </div>
     </Dialog.Footer>
   </Dialog.Content>

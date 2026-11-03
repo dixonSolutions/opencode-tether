@@ -4,13 +4,13 @@ import type {
   Command,
   Config,
   DiffFile,
+  FileNode,
   HostInfo,
   MessageInfo,
   MessageWithParts,
   Model,
   Part,
   PermissionRequest,
-  Project,
   PromptBody,
   Provider,
   QuestionRequest,
@@ -65,6 +65,21 @@ function sameDirectory(a: string | undefined, b: string): boolean {
   return !!a && trimTrailingSlash(a) === trimTrailingSlash(b);
 }
 
+function normalizeDirectory(input: string, base: string, home: string): string | null {
+  let value = input.trim();
+  if (!value) return null;
+  if (value === '~') value = home;
+  else if (value.startsWith('~/')) value = `${home.replace(/\/+$/, '')}/${value.slice(2)}`;
+  if (!value.startsWith('/')) value = `${base.replace(/\/+$/, '')}/${value}`;
+  const parts: string[] = [];
+  for (const part of value.split('/')) {
+    if (!part || part === '.') continue;
+    if (part === '..') parts.pop();
+    else parts.push(part);
+  }
+  return `/${parts.join('/')}` || '/';
+}
+
 export class AppState {
   phase = $state<Phase>('boot');
   eventState = $state<EventState>('off');
@@ -74,7 +89,6 @@ export class AppState {
   connection = $state<RemoteHealth>({ state: 'unknown' });
 
   sessions = $state<Session[]>([]);
-  projects = $state<Project[]>([]);
   agents = $state<Agent[]>([]);
   commands = $state<Command[]>([]);
   config = $state<Config | null>(null);
@@ -99,6 +113,17 @@ export class AppState {
   selectedAgent = $state('build');
   selectedModel = $state<ModelRef | null>(null);
   selectedDirectory = $state<string | null>(null);
+  directoryBrowser = $state<{
+    home: string | null;
+    path: string | null;
+    parent: string | null;
+    entries: FileNode[];
+    searchResults: string[];
+    query: string;
+    loading: boolean;
+    searching: boolean;
+    error: string | null;
+  }>({ home: null, path: null, parent: null, entries: [], searchResults: [], query: '', loading: false, searching: false, error: null });
   hostAuth = $state<{ username: string; password: string } | null>(null);
   booted = $state(false);
 
@@ -150,20 +175,6 @@ export class AppState {
     );
   }
 
-  get directoryOptions(): string[] {
-    const paths = [
-      ...this.projects.flatMap((project) => [project.worktree, ...(project.sandboxes ?? [])]),
-      ...this.sessions.map((session) => session.directory)
-    ];
-    const unique = new Map<string, string>();
-    for (const path of paths) {
-      if (!path || path === 'global') continue;
-      const clean = trimTrailingSlash(path);
-      if (!unique.has(clean)) unique.set(clean, clean);
-    }
-    return [...unique.values()].sort((a, b) => a.localeCompare(b));
-  }
-
   get visibleAgents(): Agent[] {
     return this.agents.filter((agent) => !agent.hidden && (agent.mode === 'primary' || agent.mode === 'all'));
   }
@@ -188,13 +199,196 @@ export class AppState {
   }
 
   setDirectory(directory: string | null): void {
-    const value = directory?.trim() ? trimTrailingSlash(directory.trim()) : null;
+    const base = this.directoryBrowser.path ?? this.directoryBrowser.home ?? '/';
+    const home = this.directoryBrowser.home ?? base;
+    const value = directory ? normalizeDirectory(directory, base, home) : null;
     this.selectedDirectory = value;
     const next = { ...settings.lastDirectory };
     const key = this.directoryKey();
     if (value) next[key] = value;
     else delete next[key];
     settings.lastDirectory = next;
+  }
+
+  private browseGeneration = 0;
+
+  async openDirectoryBrowser(start?: string | null): Promise<void> {
+    if (!this.client) return;
+    const generation = ++this.browseGeneration;
+    this.directoryBrowser = { ...this.directoryBrowser, error: null, loading: true };
+    try {
+      const info = await this.client.get<{ home?: string; directory?: string; worktree?: string }>('/path', 10_000);
+      if (generation !== this.browseGeneration) return;
+      const home = info.home ?? info.directory ?? '/';
+      const target = start || this.selectedDirectory || home;
+      this.directoryBrowser = { ...this.directoryBrowser, home, loading: false };
+      await this.browseDirectory(target);
+    } catch (error) {
+      if (generation !== this.browseGeneration) return;
+      this.noteBrowseAuth(error);
+      this.directoryBrowser = {
+        ...this.directoryBrowser,
+        path: null,
+        parent: null,
+        entries: [],
+        searchResults: [],
+        loading: false,
+        error: this.describeBrowseError(error)
+      };
+    }
+  }
+
+  async browseDirectory(path: string): Promise<void> {
+    if (!this.client) return;
+    const generation = ++this.browseGeneration;
+    ++this.searchGeneration;
+    const base = this.directoryBrowser.path ?? this.directoryBrowser.home ?? '/';
+    const home = this.directoryBrowser.home ?? base;
+    const clean = normalizeDirectory(path, base, home) ?? '/';
+    this.directoryBrowser = { ...this.directoryBrowser, loading: true, error: null, query: '', searchResults: [], searching: false };
+    try {
+      const entries = await this.client.get<FileNode[]>(`/file?path=${encodeURIComponent(clean)}`, 15_000);
+      if (generation !== this.browseGeneration) return;
+      this.directoryBrowser = {
+        ...this.directoryBrowser,
+        path: clean,
+        parent: clean === '/' ? null : clean.replace(/\/[^/]+\/?$/, '') || '/',
+        entries: entries
+          .filter((entry) => entry.type === 'directory')
+          .sort((a, b) => Number(a.name.startsWith('.')) - Number(b.name.startsWith('.')) || a.name.localeCompare(b.name)),
+        loading: false
+      };
+    } catch (error) {
+      if (generation !== this.browseGeneration) return;
+      this.noteBrowseAuth(error);
+      this.directoryBrowser = {
+        ...this.directoryBrowser,
+        path: clean,
+        parent: clean === '/' ? null : clean.replace(/\/[^/]+\/?$/, '') || '/',
+        loading: false,
+        entries: [],
+        searchResults: [],
+        error: this.describeBrowseError(error, clean)
+      };
+    }
+  }
+
+  private searchGeneration = 0;
+
+  async searchDirectories(query: string): Promise<void> {
+    if (!this.client) {
+      this.directoryBrowser = { ...this.directoryBrowser, searching: false };
+      return;
+    }
+    const generation = ++this.searchGeneration;
+    const q = query.trim().toLowerCase();
+    if (!q) {
+      this.directoryBrowser = { ...this.directoryBrowser, searchResults: [], searching: false };
+      return;
+    }
+    const base = this.directoryBrowser.path ?? this.directoryBrowser.home ?? '/';
+    this.directoryBrowser = { ...this.directoryBrowser, searching: true };
+    const skip = new Set([
+      'node_modules',
+      '.git',
+      '.cache',
+      '.local',
+      '.cargo',
+      '.npm',
+      '.rustup',
+      '.gradle',
+      '.android',
+      'target',
+      'build',
+      'dist',
+      '.next',
+      '.svelte-kit',
+      '.venv',
+      'venv',
+      '__pycache__'
+    ]);
+    const results: string[] = [];
+    const seenResults = new Set<string>();
+    const visited = new Set<string>([base]);
+    let frontier: Array<{ path: string; relative: string; depth: number }> = [{ path: base, relative: '', depth: 0 }];
+    let listed = 0;
+    try {
+      while (frontier.length && listed < 140 && results.length < 60) {
+        const batch = frontier.splice(0, 8);
+        await Promise.all(
+          batch.map(async (node) => {
+            if (generation !== this.searchGeneration || !this.client) return;
+            listed++;
+            try {
+              const entries = await this.client.get<FileNode[]>(`/file?path=${encodeURIComponent(node.path)}`, 10_000);
+              if (generation !== this.searchGeneration) return;
+              for (const entry of entries) {
+                if (entry.type !== 'directory') continue;
+                const name = entry.name.replace(/\/+$/, '');
+                if (!name || name.startsWith('.') || skip.has(name)) continue;
+                const relative = node.relative ? `${node.relative}/${name}` : name;
+                const absolute = entry.absolute ?? `${node.path.replace(/\/+$/, '')}/${name}`;
+                if (relative.toLowerCase().includes(q) && !seenResults.has(relative) && results.length < 60) {
+                  seenResults.add(relative);
+                  results.push(relative);
+                }
+                if (node.depth < 3 && !visited.has(absolute)) {
+                  visited.add(absolute);
+                  frontier.push({ path: absolute, relative, depth: node.depth + 1 });
+                }
+              }
+            } catch {
+              // A folder can be unreadable while its siblings are still searchable.
+            }
+          })
+        );
+      }
+      if (generation === this.searchGeneration && this.directoryBrowser.path === base) {
+        this.directoryBrowser = { ...this.directoryBrowser, searchResults: results.sort((a, b) => a.localeCompare(b)), searching: false };
+      } else if (generation === this.searchGeneration) {
+        this.directoryBrowser = { ...this.directoryBrowser, searchResults: [], searching: false };
+      }
+    } catch {
+      if (generation === this.searchGeneration) {
+        this.directoryBrowser = { ...this.directoryBrowser, searchResults: [], searching: false };
+      }
+    }
+  }
+
+  private noteBrowseAuth(error: unknown): void {
+    if (!(error instanceof ApiError) || error.status !== 401) return;
+    this.connection = { state: 'unauthorized' };
+    this.phase = this.hostMode ? 'host-login' : 'unauthorized';
+    this.lastError = 'Authentication required. Sign in again to browse folders.';
+  }
+
+  private describeBrowseError(error: unknown, path?: string): string {
+    if (error instanceof ApiError) {
+      if (error.status === 401) return 'Authentication required. Sign in again to browse folders.';
+      if (error.status === 403) return 'This host does not allow reading that folder. Check the opencode directory permissions.';
+      if (error.status === 404) return `That folder does not exist on the host${path ? `: ${path}` : ''}.`;
+      if (error.status === 400 || error.status >= 500) {
+        return `Could not read ${path ?? 'that folder'}. It may not exist, or the host may not allow access to it.`;
+      }
+      return error.message;
+    }
+    return error instanceof Error ? error.message : 'Could not read that folder on the host.';
+  }
+
+  private resetDirectoryBrowser(): void {
+    ++this.browseGeneration;
+    ++this.searchGeneration;
+    this.directoryBrowser = {
+      home: null,
+      path: null,
+      parent: null,
+      entries: [],
+      searchResults: [],
+      query: '',
+      loading: false,
+      searching: false,
+      error: null
+    };
   }
 
   async boot(): Promise<void> {
@@ -368,6 +562,7 @@ export class AppState {
     this.selectedSessionId = null;
     this.messages = [];
     this.sessions = [];
+    this.directoryBrowser = { home: null, path: null, parent: null, entries: [], searchResults: [], query: '', loading: false, searching: false, error: null };
     await this.connect(remote);
   }
 
@@ -379,15 +574,13 @@ export class AppState {
       this.client.get<Agent[]>('/agent', 15_000),
       this.client.get<Command[]>('/command', 15_000),
       this.client.get<Config>('/config', 15_000),
-      this.client.get<Project[]>('/project', 15_000),
       this.client.get<Record<string, SessionStatus>>('/session/status', 15_000)
     ]);
-    const [sessions, agents, commands, config, projects, statuses] = results;
+    const [sessions, agents, commands, config, statuses] = results;
     if (sessions.status === 'fulfilled') this.sessions = [...sessions.value].sort((a, b) => sessionUpdated(b) - sessionUpdated(a));
     if (agents.status === 'fulfilled') this.agents = agents.value;
     if (commands.status === 'fulfilled') this.commands = commands.value.filter((command) => command.name);
     if (config.status === 'fulfilled') this.config = config.value;
-    if (projects.status === 'fulfilled') this.projects = projects.value;
     if (statuses.status === 'fulfilled') this.statuses = { ...statuses.value };
 
     const configModel = parseModel(typeof this.config?.model === 'string' ? this.config.model : undefined);
@@ -1022,6 +1215,7 @@ export class AppState {
     this.phase = 'host-login';
     this.messages = [];
     this.sessions = [];
+    this.resetDirectoryBrowser();
   }
 
   async disconnect(): Promise<void> {
@@ -1031,6 +1225,7 @@ export class AppState {
     this.selectedSessionId = null;
     this.messages = [];
     this.connection = { state: 'unknown' };
+    this.resetDirectoryBrowser();
   }
 
   async refreshAll(): Promise<void> {

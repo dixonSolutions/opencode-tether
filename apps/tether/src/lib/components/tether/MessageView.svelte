@@ -46,7 +46,7 @@
 
 <article class={cn('group/message relative', isUser ? 'flex flex-col items-end' : 'flex flex-col items-start')} data-message-id={info.id}>
   {#if isUser}
-    <div class="max-w-[88%] rounded-2xl rounded-br-md border border-border/60 bg-secondary/80 px-3.5 py-2.5 shadow-sm sm:max-w-[78%]">
+    <div class="max-w-[92%] rounded-2xl rounded-br-md border border-border/60 bg-secondary/80 px-4 py-3 shadow-sm sm:max-w-[82%]">
       {#each message.parts as part (part.id)}
         {#if part.type !== 'text' && part.type !== 'file'}
           <PartView {part} />
@@ -54,7 +54,7 @@
       {/each}
       {#each message.parts as part (part.id)}
         {#if part.type === 'text' && part.text.trim()}
-          <div class="whitespace-pre-wrap break-words text-[14px] leading-relaxed text-secondary-foreground">{part.text}</div>
+          <div class="whitespace-pre-wrap break-words text-[15px] leading-relaxed text-secondary-foreground">{part.text}</div>
         {/if}
       {/each}
       {#if files.length}
@@ -65,31 +65,33 @@
         </div>
       {/if}
     </div>
-    <div class="mt-1 flex items-center gap-1.5 pr-0.5 text-[9.5px] text-muted-foreground/60">
+    <div class="mt-1.5 flex items-center gap-2 pr-1 text-xs text-muted-foreground/60">
       {#if settings.showTimestamps}<span>{time}</span>{/if}
       <DropdownMenu.Root>
         <DropdownMenu.Trigger>
-          <button class="rounded p-0.5 opacity-100 transition-opacity hover:text-foreground sm:opacity-0 sm:group-hover/message:opacity-100" aria-label="Message actions">
-            <MoreHorizontal class="size-3.5" />
-          </button>
+          {#snippet child({ props })}
+            <button {...props} type="button" class="touch-visible grid size-10 place-items-center rounded-lg opacity-100 transition-opacity hover:bg-muted hover:text-foreground sm:opacity-0 sm:group-hover/message:opacity-100" aria-label="Message actions">
+              <MoreHorizontal class="size-4" />
+            </button>
+          {/snippet}
         </DropdownMenu.Trigger>
-        <DropdownMenu.Content align="end" class="w-36">
-          <DropdownMenu.Item onclick={copyMessage}><Copy class="size-3.5" /> Copy</DropdownMenu.Item>
-          <DropdownMenu.Item onclick={removeMessage} class="text-red-400"><Trash2 class="size-3.5" /> Delete</DropdownMenu.Item>
+        <DropdownMenu.Content align="end" class="w-48">
+          <DropdownMenu.Item onclick={copyMessage}><Copy class="size-4" /> Copy</DropdownMenu.Item>
+          <DropdownMenu.Item onclick={removeMessage} class="text-red-400"><Trash2 class="size-4" /> Delete</DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Root>
     </div>
   {:else}
-    <div class="mb-1.5 flex items-center gap-2 pl-0.5">
-      <Brand size={18} />
-      <span class="text-[11px] font-medium text-foreground/80">{info.agent ?? 'opencode'}</span>
-      {#if modelName}<span class="text-[9.5px] text-muted-foreground/50">{modelName}</span>{/if}
-      {#if settings.showTimestamps}<span class="text-[9.5px] text-muted-foreground/40">{time}</span>{/if}
+    <div class="mb-2 flex items-center gap-2.5 pl-0.5">
+      <Brand size={22} />
+      <span class="text-sm font-medium text-foreground/85">{info.agent ?? 'opencode'}</span>
+      {#if modelName}<span class="text-xs text-muted-foreground/50">{modelName}</span>{/if}
+      {#if settings.showTimestamps}<span class="text-xs text-muted-foreground/40">{time}</span>{/if}
       {#if streaming}
-        <span class="live-dot size-1.5 rounded-full bg-tether"></span>
+        <span class="live-dot size-2 rounded-full bg-tether"></span>
       {/if}
     </div>
-    <div class="w-full min-w-0 space-y-2.5 pl-[30px]">
+    <div class="w-full min-w-0 space-y-3 pl-[34px]">
       {#each message.parts as part (part.id)}
         {#if !(part.type === 'text' && (part as TextPart).ignored)}
           <PartView {part} streaming={streaming && part.id === lastTextID} />
@@ -97,32 +99,34 @@
       {/each}
       {#if message.parts.length === 0 && streaming}
         <div class="flex items-center gap-1 py-1">
-          <span class="size-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:-0.3s]"></span>
-          <span class="size-1.5 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:-0.15s]"></span>
-          <span class="size-1.5 animate-bounce rounded-full bg-muted-foreground/60"></span>
+          <span class="size-2 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:-0.3s]"></span>
+          <span class="size-2 animate-bounce rounded-full bg-muted-foreground/60 [animation-delay:-0.15s]"></span>
+          <span class="size-2 animate-bounce rounded-full bg-muted-foreground/60"></span>
         </div>
       {/if}
       {#if errorText}
-        <div class="flex items-start gap-2 rounded-xl border border-red-500/25 bg-red-500/[0.06] px-3 py-2 text-[12px] text-red-300/90">
-          <CircleAlert class="mt-0.5 size-3.5 shrink-0" />
+        <div class="flex items-start gap-2.5 rounded-xl border border-red-500/25 bg-red-500/[0.06] px-3.5 py-2.5 text-sm text-red-300/90">
+          <CircleAlert class="mt-0.5 size-4 shrink-0" />
           <span class="min-w-0 break-words">{errorText}</span>
         </div>
       {/if}
     </div>
-    <div class="mt-1.5 flex min-h-5 items-center gap-2 pl-[30px] text-[9.5px] text-muted-foreground/50">
+    <div class="mt-2 flex min-h-6 items-center gap-2.5 pl-[34px] text-xs text-muted-foreground/50">
       {#if info.tokens}
         <span>{formatTokens(info.tokens.input + info.tokens.output)} tokens</span>
         {#if info.cost}<span>· {formatCost(info.cost)}</span>{/if}
       {/if}
       <DropdownMenu.Root>
         <DropdownMenu.Trigger>
-          <button class="rounded p-0.5 opacity-100 transition-opacity hover:text-foreground sm:opacity-0 sm:group-hover/message:opacity-100" aria-label="Message actions">
-            <MoreHorizontal class="size-3.5" />
-          </button>
+          {#snippet child({ props })}
+            <button {...props} type="button" class="touch-visible grid size-10 place-items-center rounded-lg opacity-100 transition-opacity hover:bg-muted hover:text-foreground sm:opacity-0 sm:group-hover/message:opacity-100" aria-label="Message actions">
+              <MoreHorizontal class="size-4" />
+            </button>
+          {/snippet}
         </DropdownMenu.Trigger>
-        <DropdownMenu.Content align="start" class="w-36">
-          <DropdownMenu.Item onclick={copyMessage}><Copy class="size-3.5" /> Copy</DropdownMenu.Item>
-          <DropdownMenu.Item onclick={removeMessage} class="text-red-400"><Trash2 class="size-3.5" /> Delete</DropdownMenu.Item>
+        <DropdownMenu.Content align="start" class="w-48">
+          <DropdownMenu.Item onclick={copyMessage}><Copy class="size-4" /> Copy</DropdownMenu.Item>
+          <DropdownMenu.Item onclick={removeMessage} class="text-red-400"><Trash2 class="size-4" /> Delete</DropdownMenu.Item>
         </DropdownMenu.Content>
       </DropdownMenu.Root>
     </div>

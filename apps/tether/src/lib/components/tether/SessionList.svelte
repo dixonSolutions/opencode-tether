@@ -5,7 +5,6 @@
   import { Root as Input } from '$lib/components/ui/input/index.js';
   import { Root as Button } from '$lib/components/ui/button/index.js';
   import * as Dialog from '$lib/components/ui/dialog/index.js';
-  import { cn } from '$lib/utils';
   import Search from '@lucide/svelte/icons/search';
   import Plus from '@lucide/svelte/icons/plus';
   import X from '@lucide/svelte/icons/x';
@@ -79,51 +78,51 @@
 <svelte:window onkeydown={onKeydown} />
 
 <div class="flex min-h-0 flex-1 flex-col">
-  <div class="flex items-center gap-1.5 px-3 pb-1.5 pt-2">
+  <div class="flex items-center gap-2 px-3 pb-2 pt-3 sm:px-4">
     <div class="relative flex-1">
-      <Search class="absolute left-2 top-1/2 size-3 -translate-y-1/2 text-muted-foreground/70" />
+      <Search class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70" />
       <Input
         bind:ref={searchInput}
         bind:value={app.search}
         placeholder="Search sessions"
-        class="h-7 rounded-lg border-transparent bg-muted/45 pl-7 pr-7 text-[11px] placeholder:text-muted-foreground/50 focus-visible:bg-muted/70"
+        class="h-11 rounded-xl border-transparent bg-muted/45 pl-9 pr-12 text-sm placeholder:text-muted-foreground/50 focus-visible:bg-muted/70"
       />
       {#if app.search}
-        <button class="absolute right-1.5 top-1/2 -translate-y-1/2 rounded p-0.5 text-muted-foreground hover:text-foreground" onclick={() => (app.search = '')} aria-label="Clear search">
-          <X class="size-3" />
+        <button class="absolute right-1 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground hover:text-foreground" onclick={() => (app.search = '')} aria-label="Clear search">
+          <X class="size-4" />
         </button>
       {/if}
     </div>
-    <Button variant="ghost" size="icon-sm" class="size-7" onclick={create} title="New session" aria-label="New session">
-      <Plus class="size-3.5" />
+    <Button variant="ghost" size="icon-sm" onclick={create} title="New session" aria-label="New session">
+      <Plus class="size-4" />
     </Button>
   </div>
 
-  <div class="tether-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-1.5 pb-2">
+  <div class="tether-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
     {#if app.sessionsLoading && app.sessions.length === 0}
-      <div class="space-y-1 px-1.5 pt-2">
+      <div class="space-y-1.5 px-1 pt-2">
         {#each Array(6) as _}
-          <div class="shimmer h-9 rounded-lg bg-muted/40"></div>
+          <div class="shimmer h-14 rounded-xl bg-muted/40"></div>
         {/each}
       </div>
     {:else if groups.length === 0}
       <div class="flex flex-col items-center px-4 py-12 text-center">
-        <MessageSquarePlus class="size-5 text-muted-foreground/40" />
-        <div class="mt-2 text-[11px] font-medium text-muted-foreground/70">
+        <MessageSquarePlus class="size-7 text-muted-foreground/40" />
+        <div class="mt-3 text-sm font-medium text-muted-foreground/70">
           {app.search ? 'No matching sessions' : 'No sessions yet'}
         </div>
-        <div class="mt-0.5 text-[10px] text-muted-foreground/45">
+        <div class="mt-1 text-xs text-muted-foreground/45">
           {app.search ? 'Try another search term.' : 'Start one from the composer.'}
         </div>
       </div>
     {:else}
       {#each groups as group}
         <div class="mt-3 first:mt-1">
-          <div class="sticky top-0 z-10 flex items-center gap-2 bg-sidebar/95 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.14em] text-muted-foreground/45 backdrop-blur">
+          <div class="sticky top-0 z-10 flex items-center gap-2 bg-sidebar/95 px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-muted-foreground/50 backdrop-blur">
             {group.label}
-            <span class="font-normal tracking-normal text-muted-foreground/30">{group.sessions.length}</span>
+            <span class="font-normal tracking-normal text-muted-foreground/35">{group.sessions.length}</span>
           </div>
-          <div class="space-y-0.5">
+          <div class="space-y-1">
             {#each group.sessions as session (session.id)}
               <SessionRow
                 {session}
@@ -142,10 +141,10 @@
 </div>
 
 <Dialog.Root bind:open={renameOpen}>
-  <Dialog.Content class="sm:max-w-sm">
+  <Dialog.Content class="sm:max-w-md">
     <Dialog.Header>
-      <Dialog.Title class="text-sm">Rename session</Dialog.Title>
-      <Dialog.Description class="text-xs text-muted-foreground">Choose a short, descriptive title.</Dialog.Description>
+      <Dialog.Title class="text-base">Rename session</Dialog.Title>
+      <Dialog.Description class="text-sm text-muted-foreground">Choose a short, descriptive title.</Dialog.Description>
     </Dialog.Header>
     <form
       onsubmit={(event) => {
@@ -154,7 +153,7 @@
       }}
     >
       <Input bind:value={renameValue} placeholder="Session title" autofocus />
-      <Dialog.Footer class="mt-4">
+      <Dialog.Footer class="mt-5">
         <Button type="button" variant="ghost" size="sm" onclick={() => (renameOpen = false)}>Cancel</Button>
         <Button type="submit" size="sm" disabled={!renameValue.trim()}>Save</Button>
       </Dialog.Footer>

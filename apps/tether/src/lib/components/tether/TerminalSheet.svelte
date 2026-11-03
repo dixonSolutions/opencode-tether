@@ -254,37 +254,39 @@
 </script>
 
 <Sheet.Root bind:open>
-  <Sheet.Content side="bottom" showCloseButton={false} class="android-safe-bottom h-[78dvh] gap-0 border-t border-border/70 bg-[#0b0a0a] p-0 sm:h-[66dvh]">
-    <div class="android-safe-top flex h-11 shrink-0 items-center gap-2 border-b border-white/10 px-3">
-      <span class="grid size-6 place-items-center rounded-md bg-tether/10 text-tether"><TerminalIcon class="size-3.5" /></span>
-      <span class="min-w-0 flex-1 truncate text-[11.5px] font-semibold">Terminal <span class="font-normal text-muted-foreground/60">· {title}</span></span>
+  <Sheet.Content side="bottom" showCloseButton={false} class="safe-x android-safe-bottom h-[78dvh] gap-0 border-t border-border/70 bg-[#0b0a0a] p-0 sm:h-[66dvh]">
+    <Sheet.Title class="sr-only">Terminal</Sheet.Title>
+    <Sheet.Description class="sr-only">Shell attached to the current session.</Sheet.Description>
+    <div class="android-safe-top flex min-h-14 shrink-0 items-center gap-2.5 border-b border-white/10 px-3.5">
+      <span class="grid size-9 place-items-center rounded-lg bg-tether/10 text-tether"><TerminalIcon class="size-5" /></span>
+      <span class="min-w-0 flex-1 truncate text-sm font-semibold">Terminal <span class="font-normal text-muted-foreground/60">· {title}</span></span>
       {#if starting}
-        <span class="flex items-center gap-1 text-[9px] text-muted-foreground"><Loader2 class="size-3 animate-spin" /> opening</span>
+        <span class="flex items-center gap-1.5 text-xs text-muted-foreground"><Loader2 class="size-4 animate-spin" /> opening</span>
       {:else if exited}
-        <Badge variant="secondary" class="px-1.5 py-0 text-[8.5px] uppercase tracking-wide">exited</Badge>
+        <Badge variant="secondary" class="px-2 py-0.5 text-[10px] uppercase tracking-wide">exited</Badge>
       {:else if ready}
-        <span class="live-dot size-1.5 rounded-full bg-emerald-400"></span>
+        <span class="live-dot size-2 rounded-full bg-emerald-400"></span>
       {/if}
-      <button type="button" class="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-white/5 hover:text-foreground" onclick={restart} title="Restart shell" aria-label="Restart shell">
-        <RotateCcw class="size-3.5" />
+      <button type="button" class="grid size-10 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground" onclick={restart} title="Restart shell" aria-label="Restart shell">
+        <RotateCcw class="size-4" />
       </button>
-      <button type="button" class="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-white/5 hover:text-foreground" onclick={clear} title="Clear terminal" aria-label="Clear terminal">
-        <Eraser class="size-3.5" />
+      <button type="button" class="grid size-10 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground" onclick={clear} title="Clear terminal" aria-label="Clear terminal">
+        <Eraser class="size-4" />
       </button>
-      <button type="button" class="grid size-7 place-items-center rounded-md text-muted-foreground hover:bg-white/5 hover:text-foreground" onclick={close} title="Close terminal" aria-label="Close terminal">
+      <button type="button" class="grid size-10 place-items-center rounded-lg text-muted-foreground hover:bg-white/5 hover:text-foreground" onclick={close} title="Close terminal" aria-label="Close terminal">
         <X class="size-4" />
       </button>
     </div>
     {#if error}
-      <div class="flex items-center gap-1.5 border-b border-red-500/20 bg-red-500/[0.06] px-3 py-1.5 text-[10px] text-red-300">
-        <CircleAlert class="size-3" /> <span class="min-w-0 flex-1 truncate">{error}</span>
+      <div class="flex items-center gap-2 border-b border-red-500/20 bg-red-500/[0.06] px-3 py-2 text-xs text-red-300">
+        <CircleAlert class="size-4" /> <span class="min-w-0 flex-1 truncate">{error}</span>
         <button class="rounded px-1 py-0.5 underline underline-offset-2 hover:bg-red-500/10" onclick={restart}>retry</button>
       </div>
     {/if}
     <div class="relative min-h-0 flex-1">
       <div bind:this={host} class={cn('h-full w-full overflow-hidden px-1 py-1', starting && 'opacity-50')}></div>
       {#if starting && !term}
-        <div class="pointer-events-none absolute inset-0 grid place-items-center text-[10px] text-muted-foreground/60">opening shell…</div>
+        <div class="pointer-events-none absolute inset-0 grid place-items-center text-xs text-muted-foreground/60">opening shell…</div>
       {/if}
     </div>
   </Sheet.Content>

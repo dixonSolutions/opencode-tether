@@ -35,6 +35,7 @@
   import GitPullRequest from '@lucide/svelte/icons/git-pull-request';
   import WifiOff from '@lucide/svelte/icons/wifi-off';
   import ShieldCheck from '@lucide/svelte/icons/shield-check';
+  import Folder from '@lucide/svelte/icons/folder';
 
   let {
     onOpenSidebar,
@@ -147,21 +148,21 @@
 </script>
 
 <section class="flex h-full min-h-0 flex-1 flex-col overflow-hidden bg-background">
-  <header class="android-safe-top android-no-blur flex min-h-12 shrink-0 items-center gap-1.5 border-b border-border/60 bg-background/80 px-1.5 backdrop-blur-xl sm:min-h-13 sm:px-3">
-    <Button variant="ghost" size="icon-sm" class="lg:hidden" onclick={onOpenSidebar} aria-label="Open sessions">
-      <Menu class="size-4" />
+  <header class="safe-x android-safe-top android-no-blur flex min-h-14 shrink-0 items-center gap-2 border-b border-border/60 bg-background/80 px-2 backdrop-blur-xl sm:min-h-16 sm:px-4">
+    <Button variant="ghost" size="icon" class="lg:hidden" onclick={onOpenSidebar} aria-label="Open sessions">
+      <Menu class="size-5" />
     </Button>
     <div class="min-w-0 flex-1 pl-0.5">
       <div class="flex items-center gap-1.5">
-        <h1 class="truncate text-[12.5px] font-semibold tracking-tight sm:text-[13px]">{title}</h1>
+        <h1 class="truncate text-[16px] font-semibold tracking-tight sm:text-[17px]">{title}</h1>
         {#if busy}
-          <span class="hidden items-center gap-1 rounded-full border border-tether/20 bg-tether/10 px-1.5 py-0.5 text-[8.5px] font-medium uppercase tracking-wide text-tether sm:inline-flex">
+          <span class="hidden items-center gap-1.5 rounded-full border border-tether/20 bg-tether/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-wide text-tether sm:inline-flex">
             <span class="live-dot size-1 rounded-full bg-tether"></span> working
           </span>
         {/if}
       </div>
-      <div class="flex min-w-0 items-center gap-1.5 text-[9.5px] text-muted-foreground/60">
-        <StatusDot state={app.connection.state === 'online' ? 'online' : app.connection.state} size={5} />
+      <div class="flex min-w-0 items-center gap-2 text-xs text-muted-foreground/65">
+        <StatusDot state={app.connection.state === 'online' ? 'online' : app.connection.state} size={6} />
         <span class="truncate">
           {#if app.connection.state === 'online' || app.connection.state === 'idle'}
             {app.connection.latencyMs ? `${app.connection.latencyMs}ms` : 'online'}{app.eventState === 'live' ? ' · live' : app.eventState === 'reconnecting' ? ' · reconnecting' : ''}
@@ -172,56 +173,57 @@
           {:else}
             connecting
           {/if}
-          {#if session?.directory}<span class="hidden sm:inline"> · {projectName(session.directory)}</span>{/if}
+          {#if session?.directory}<span class="hidden items-center gap-1 sm:inline-flex"><Folder class="size-3.5" /> {projectName(session.directory)}</span>{/if}
         </span>
       </div>
     </div>
 
-    <Button variant="ghost" size="icon-sm" class="hidden sm:inline-flex" onclick={newSession} title="New session">
-      <Plus class="size-4" />
+    <Button variant="ghost" size="icon" class="hidden sm:inline-flex" onclick={newSession} title="New session" aria-label="New session">
+      <Plus class="size-5" />
     </Button>
-    <Button variant="ghost" size="icon-sm" class={cn(panelOpen && 'bg-muted text-foreground')} onclick={onOpenPanel} title="Session panel" aria-label="Toggle session panel">
-      <PanelRight class="size-4" />
-      {#if panelCount > 0}<span class="absolute right-0.5 top-0.5 size-1.5 rounded-full bg-tether"></span>{/if}
+    <Button variant="ghost" size="icon" class={cn('relative', panelOpen && 'bg-muted text-foreground')} onclick={onOpenPanel} title="Session panel" aria-label="Toggle session panel">
+      <PanelRight class="size-5" />
+      {#if panelCount > 0}<span class="absolute right-1 top-1 size-2 rounded-full bg-tether"></span>{/if}
     </Button>
     <DropdownMenu.Root>
       <DropdownMenu.Trigger>
         {#snippet child({ props })}
-          <Button variant="ghost" size="icon-sm" {...props} aria-label="Session actions">
-            <MoreHorizontal class="size-4" />
+          <Button variant="ghost" size="icon" {...props} aria-label="Session actions">
+            <MoreHorizontal class="size-5" />
           </Button>
         {/snippet}
       </DropdownMenu.Trigger>
-      <DropdownMenu.Content align="end" class="w-48">
-        <DropdownMenu.Item onclick={openRename} disabled={!session}><Pencil class="size-3.5" /> Rename</DropdownMenu.Item>
-        <DropdownMenu.Item onclick={() => (terminalOpen = true)} disabled={!session}><Terminal class="size-3.5" /> Terminal</DropdownMenu.Item>
-        <DropdownMenu.Item onclick={() => app.shareSession()} disabled={!session}><Share2 class="size-3.5" /> Share</DropdownMenu.Item>
-        <DropdownMenu.Item onclick={() => app.forkSession()} disabled={!session}><GitFork class="size-3.5" /> Fork</DropdownMenu.Item>
-        <DropdownMenu.Item onclick={() => app.summarizeSession()} disabled={!session}><Sparkles class="size-3.5" /> Summarize</DropdownMenu.Item>
-        <DropdownMenu.Item onclick={copyLink} disabled={!session}><Copy class="size-3.5" /> Copy link</DropdownMenu.Item>
-        <DropdownMenu.Item onclick={copyID} disabled={!session}><Terminal class="size-3.5" /> Copy session ID</DropdownMenu.Item>
+      <DropdownMenu.Content align="end" class="w-60">
+        <DropdownMenu.Item onclick={openRename} disabled={!session}><Pencil class="size-4" /> Rename</DropdownMenu.Item>
+        <DropdownMenu.Item onclick={() => (terminalOpen = true)} disabled={!session}><Terminal class="size-4" /> Terminal</DropdownMenu.Item>
+        <DropdownMenu.Item onclick={() => app.shareSession()} disabled={!session}><Share2 class="size-4" /> Share</DropdownMenu.Item>
+        <DropdownMenu.Item onclick={() => app.forkSession()} disabled={!session}><GitFork class="size-4" /> Fork</DropdownMenu.Item>
+        <DropdownMenu.Item onclick={() => app.summarizeSession()} disabled={!session}><Sparkles class="size-4" /> Summarize</DropdownMenu.Item>
+        <DropdownMenu.Item onclick={copyLink} disabled={!session}><Copy class="size-4" /> Copy link</DropdownMenu.Item>
+        <DropdownMenu.Item onclick={copyID} disabled={!session}><Terminal class="size-4" /> Copy session ID</DropdownMenu.Item>
         <DropdownMenu.Separator />
-        <DropdownMenu.Item onclick={() => app.refreshMessages()}><RefreshCw class="size-3.5" /> Refresh messages</DropdownMenu.Item>
-        <DropdownMenu.Item onclick={() => app.refreshAll()}><ShieldCheck class="size-3.5" /> Refresh host data</DropdownMenu.Item>
+        <DropdownMenu.Item onclick={() => app.refreshMessages()}><RefreshCw class="size-4" /> Refresh messages</DropdownMenu.Item>
+        <DropdownMenu.Item onclick={() => app.refreshAll()}><ShieldCheck class="size-4" /> Refresh host data</DropdownMenu.Item>
         <DropdownMenu.Separator />
         <DropdownMenu.Item onclick={deleteCurrent} disabled={!session || deleting} class="text-red-400">
-          <Trash2 class="size-3.5" /> Delete session
+          <Trash2 class="size-4" /> Delete session
         </DropdownMenu.Item>
       </DropdownMenu.Content>
     </DropdownMenu.Root>
   </header>
 
   {#if app.connection.state === 'offline' || app.connection.state === 'unauthorized'}
-    <div class="flex shrink-0 items-center justify-center gap-2 border-b border-red-500/20 bg-red-500/[0.06] px-3 py-1.5 text-[10.5px] text-red-300/90">
-      <WifiOff class="size-3" />
+    <div class="flex shrink-0 items-center justify-center gap-2 border-b border-red-500/20 bg-red-500/[0.06] px-3 py-2.5 text-sm text-red-300/90">
+      <WifiOff class="size-4" />
       <span class="truncate">{app.connection.error ?? app.lastError ?? 'Connection lost'}</span>
-      <button class="ml-1 rounded px-1.5 py-0.5 font-medium underline underline-offset-2 hover:bg-red-500/10" onclick={() => app.retry()}>Reconnect</button>
+      <button class="ml-1 min-h-10 rounded-lg px-3 py-1.5 font-medium underline underline-offset-2 hover:bg-red-500/10" onclick={() => app.retry()}>Reconnect</button>
     </div>
   {/if}
 
   <div class="relative flex min-h-0 flex-1 flex-col">
+    <div class="relative flex min-h-0 flex-1 flex-col">
     <div bind:this={scroller} onscroll={onScroll} class="tether-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth">
-      <div class="mx-auto w-full max-w-3xl px-3 pb-6 pt-4 sm:px-5 sm:pt-6">
+      <div class="mx-auto w-full max-w-3xl px-4 pb-6 pt-4 sm:px-6 sm:pt-6 2xl:max-w-4xl">
         {#if app.messagesLoading && app.messages.length === 0}
           <div class="space-y-5 py-4">
             <div class="flex gap-2"><Skeleton class="size-5 rounded-md" /><div class="flex-1 space-y-2"><Skeleton class="h-3 w-24" /><Skeleton class="h-3 w-full" /><Skeleton class="h-3 w-4/5" /></div></div>
@@ -231,31 +233,31 @@
         {:else if app.messages.length === 0}
           <div class="flex min-h-[52dvh] flex-col items-center justify-center py-8 text-center">
             <Brand size={52} />
-            <h2 class="mt-4 text-balance text-lg font-semibold tracking-tight sm:text-xl">
+            <h2 class="mt-5 text-balance text-xl font-semibold tracking-tight sm:text-2xl">
               {session ? 'Start the conversation' : 'What are we building?'}
             </h2>
-            <p class="mt-1 max-w-sm text-balance text-[12px] leading-relaxed text-muted-foreground">
+            <p class="mt-2 max-w-md text-balance text-sm leading-relaxed text-muted-foreground">
               {#if session}
-                Send a message to <span class="text-foreground/80">{title}</span>. Use <code class="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">/</code> for commands or <code class="rounded bg-muted px-1 py-0.5 font-mono text-[10px]">!</code> to run a shell command.
+                Send a message to <span class="text-foreground/80">{title}</span>. Use <code class="rounded bg-muted px-1 py-0.5 font-mono text-xs">/</code> for commands or <code class="rounded bg-muted px-1 py-0.5 font-mono text-xs">!</code> to run a shell command.
               {:else}
                 A new session will be created on your connected opencode host when you send your first message.
               {/if}
             </p>
-            <div class="mt-5 grid w-full max-w-lg grid-cols-1 gap-1.5 sm:grid-cols-2">
+            <div class="mt-6 grid w-full max-w-xl grid-cols-1 gap-2 sm:grid-cols-2">
               {#each suggestions as suggestion}
                 {@const SuggestionIcon = suggestion.icon}
                 <button
                   type="button"
-                  class="group flex items-start gap-2 rounded-xl border border-border/60 bg-card/40 px-3 py-2 text-left transition-colors hover:border-border hover:bg-card/70"
+                  class="group flex min-h-14 items-start gap-3 rounded-xl border border-border/60 bg-card/40 px-3.5 py-3 text-left transition-colors hover:border-border hover:bg-card/70"
                   onclick={() => sendSuggestion(suggestion.text)}
                 >
-                  <SuggestionIcon class="mt-0.5 size-3.5 text-tether/80" />
-                  <span class="text-[11.5px] font-medium text-foreground/85">{suggestion.title}</span>
+                  <SuggestionIcon class="mt-0.5 size-4 text-tether/80" />
+                  <span class="text-sm font-medium text-foreground/85">{suggestion.title}</span>
                 </button>
               {/each}
             </div>
             {#if app.connection.busySessions}
-              <div class="mt-4 text-[10px] text-muted-foreground/50">{app.connection.busySessions} session{app.connection.busySessions === 1 ? '' : 's'} busy on this host</div>
+              <div class="mt-4 text-xs text-muted-foreground/50">{app.connection.busySessions} session{app.connection.busySessions === 1 ? '' : 's'} busy on this host</div>
             {/if}
           </div>
         {:else}
@@ -267,7 +269,7 @@
         {/if}
 
         {#if app.selectedStatus.type === 'retry'}
-          <div class="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 text-[11px] text-amber-200/80">
+          <div class="mt-4 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3.5 py-2.5 text-sm text-amber-200/80">
             Retrying in {Math.max(0, Math.round((app.selectedStatus.next - Date.now()) / 1000))}s · {app.selectedStatus.message}
           </div>
         {/if}
@@ -277,15 +279,16 @@
     {#if !stick && app.messages.length > 0}
       <button
         type="button"
-        class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full border border-border/80 bg-popover/95 px-2.5 py-1.5 text-[10px] font-medium text-muted-foreground shadow-xl backdrop-blur-xl hover:text-foreground"
+        class="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-2 rounded-full border border-border/80 bg-popover/95 px-4 py-2.5 text-sm font-medium text-muted-foreground shadow-xl backdrop-blur-xl hover:text-foreground"
         onclick={jumpToLatest}
       >
-        <ArrowDown class="size-3" /> Jump to latest
+        <ArrowDown class="size-4" /> Jump to latest
       </button>
     {/if}
+    </div>
 
     {#if app.sessionPermissions.length || app.sessionQuestions.length}
-      <div class="tether-scroll max-h-[44dvh] shrink-0 space-y-1.5 overflow-y-auto border-t border-border/60 bg-background/60 px-2.5 pt-2 backdrop-blur sm:px-4">
+      <div class="tether-scroll max-h-[48dvh] shrink-0 space-y-2 overflow-y-auto border-t border-border/60 bg-background/60 px-3 pt-2.5 backdrop-blur sm:px-5">
         {#each app.sessionQuestions as question (question.id)}
           <QuestionCard request={question} />
         {/each}
@@ -302,10 +305,10 @@
 <TerminalSheet bind:open={terminalOpen} />
 
 <Dialog.Root bind:open={renameOpen}>
-  <Dialog.Content class="sm:max-w-sm">
+  <Dialog.Content class="sm:max-w-md">
     <Dialog.Header>
-      <Dialog.Title class="text-sm">Rename session</Dialog.Title>
-      <Dialog.Description class="text-xs text-muted-foreground">A short, descriptive title appears in the session list.</Dialog.Description>
+      <Dialog.Title class="text-base">Rename session</Dialog.Title>
+      <Dialog.Description class="text-sm text-muted-foreground">A short, descriptive title appears in the session list.</Dialog.Description>
     </Dialog.Header>
     <form
       onsubmit={(event) => {
@@ -314,7 +317,7 @@
       }}
     >
       <Input bind:value={renameValue} placeholder="Session title" autofocus />
-      <Dialog.Footer class="mt-4">
+      <Dialog.Footer class="mt-5">
         <Button variant="ghost" size="sm" type="button" onclick={() => (renameOpen = false)}>Cancel</Button>
         <Button size="sm" type="submit" disabled={!renameValue.trim()}>Save</Button>
       </Dialog.Footer>

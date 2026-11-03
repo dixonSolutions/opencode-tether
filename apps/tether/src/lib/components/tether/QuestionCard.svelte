@@ -55,22 +55,22 @@
   }
 </script>
 
-<div class="overflow-hidden rounded-xl border border-sky-500/25 bg-sky-500/[0.05] shadow-[0_10px_40px_rgba(0,0,0,0.16)] backdrop-blur">
-  <div class="flex items-start gap-2.5 px-3 py-2.5">
-    <span class="mt-0.5 grid size-7 shrink-0 place-items-center rounded-lg border border-sky-500/25 bg-sky-500/10 text-sky-300">
-      <MessageCircleQuestion class="size-3.5" />
+<div class="overflow-hidden rounded-xl border border-sky-500/25 bg-sky-500/[0.05] android-no-blur shadow-[0_10px_40px_rgba(0,0,0,0.16)] backdrop-blur">
+  <div class="flex items-start gap-3 px-4 py-3.5">
+    <span class="mt-0.5 grid size-10 shrink-0 place-items-center rounded-xl border border-sky-500/25 bg-sky-500/10 text-sky-300">
+      <MessageCircleQuestion class="size-5" />
     </span>
-    <div class="min-w-0 flex-1 space-y-3">
+    <div class="min-w-0 flex-1 space-y-4">
       {#each request.questions as question, index}
         <div>
-          {#if question.header}<div class="text-[9px] font-semibold uppercase tracking-[0.14em] text-sky-300/70">{question.header}</div>{/if}
-          <div class="text-[12.5px] font-medium leading-snug text-foreground/95">{question.question}</div>
-          <div class="mt-1.5 space-y-1">
+          {#if question.header}<div class="text-[11px] font-semibold uppercase tracking-[0.12em] text-sky-300/70">{question.header}</div>{/if}
+          <div class="text-[15px] font-medium leading-snug text-foreground/95">{question.question}</div>
+          <div class="mt-2 space-y-1.5">
             {#each question.options ?? [] as option}
               <button
                 type="button"
                 class={cn(
-                  'flex w-full items-start gap-2 rounded-lg border px-2.5 py-1.5 text-left transition-colors',
+                  'flex min-h-12 w-full items-start gap-2.5 rounded-xl border px-3 py-2.5 text-left transition-colors',
                   isSelected(index, option.label)
                     ? 'border-sky-400/40 bg-sky-400/10'
                     : 'border-border/60 bg-background/30 hover:border-border hover:bg-muted/40'
@@ -79,16 +79,16 @@
               >
                 <span
                   class={cn(
-                    'mt-0.5 grid size-4 shrink-0 place-items-center border',
+                    'mt-0.5 grid size-5 shrink-0 place-items-center border',
                     question.multiple ? 'rounded-[4px]' : 'rounded-full',
                     isSelected(index, option.label) ? 'border-sky-400 bg-sky-400 text-sky-950' : 'border-border'
                   )}
                 >
-                  {#if isSelected(index, option.label)}<Check class="size-2.5" strokeWidth={3} />{/if}
+                  {#if isSelected(index, option.label)}<Check class="size-3" strokeWidth={3} />{/if}
                 </span>
                 <span class="min-w-0">
-                  <span class="block text-[11.5px] font-medium">{option.label}</span>
-                  {#if option.description}<span class="mt-0.5 block text-[10px] leading-snug text-muted-foreground">{option.description}</span>{/if}
+                  <span class="block text-sm font-medium">{option.label}</span>
+                  {#if option.description}<span class="mt-0.5 block text-xs leading-snug text-muted-foreground">{option.description}</span>{/if}
                 </span>
               </button>
             {/each}
@@ -96,7 +96,7 @@
               <Input
                 bind:value={custom[index]}
                 placeholder="Type another answer…"
-                class="h-8 text-[11.5px]"
+                class="h-11 text-sm"
                 oninput={() => {
                   if (custom[index]?.trim()) selections[index] = [];
                 }}
@@ -107,12 +107,12 @@
       {/each}
     </div>
   </div>
-  <div class="flex items-center gap-1.5 border-t border-sky-500/15 bg-background/20 px-3 py-2">
-    <Button variant="ghost" size="sm" class="h-7 text-[11px] text-muted-foreground" onclick={() => app.rejectQuestion(request.id)} disabled={submitting}>
+  <div class="flex items-center gap-2 border-t border-sky-500/15 bg-background/20 px-4 py-3">
+    <Button variant="ghost" size="sm" class="h-11 text-sm text-muted-foreground" onclick={() => app.rejectQuestion(request.id)} disabled={submitting}>
       Dismiss
     </Button>
-    <Button size="sm" class="ml-auto h-7 gap-1.5 bg-sky-400/90 text-[11px] text-sky-950 hover:bg-sky-300" onclick={submit} disabled={!complete || submitting}>
-      <Send class="size-3" /> Send answer
+    <Button size="sm" class="ml-auto h-11 gap-2 bg-sky-400/90 text-sm text-sky-950 hover:bg-sky-300" onclick={submit} disabled={!complete || submitting}>
+      <Send class="size-4" /> Send answer
     </Button>
   </div>
 </div>
