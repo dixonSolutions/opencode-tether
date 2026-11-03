@@ -3,6 +3,7 @@
   import Brand from './Brand.svelte';
   import StatusDot from './StatusDot.svelte';
   import SessionList from './SessionList.svelte';
+  import ProjectPicker from './ProjectPicker.svelte';
   import { Root as Button } from '$lib/components/ui/button/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
   import Plus from '@lucide/svelte/icons/plus';
@@ -11,6 +12,10 @@
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
   import RefreshCw from '@lucide/svelte/icons/refresh-cw';
   import Zap from '@lucide/svelte/icons/zap';
+  import Folder from '@lucide/svelte/icons/folder';
+  import { projectName } from '$lib/platform';
+
+  let projectOpen = $state(false);
 
   let {
     onOpenRemotes,
@@ -79,6 +84,17 @@
       </div>
     {/if}
 
+    <button
+      type="button"
+      class="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[11px] text-muted-foreground transition-colors hover:bg-sidebar-accent hover:text-foreground"
+      onclick={() => (projectOpen = true)}
+      aria-label="Choose project and directory"
+    >
+      <Folder class="size-3.5 shrink-0" />
+      <span class="min-w-0 flex-1 truncate">{app.selectedDirectory ? projectName(app.selectedDirectory) : 'All projects'}</span>
+      <span class="shrink-0 text-[9.5px] text-muted-foreground/50">change</span>
+    </button>
+
     <Button class="h-8 w-full justify-start gap-1.5 rounded-lg border border-tether/20 bg-tether/10 text-[11.5px] font-medium text-tether hover:bg-tether/15" size="sm" onclick={newSession}>
       <Plus class="size-3.5" /> New session
     </Button>
@@ -86,6 +102,7 @@
 
   <div class="mx-2 h-px bg-sidebar-border/60"></div>
   <SessionList {onNavigate} onnew={onNavigate} />
+  <ProjectPicker bind:open={projectOpen} />
 
   <div class="android-safe-bottom border-t border-sidebar-border/60 px-2 py-2">
     <div class="mb-1.5 flex items-center gap-2 px-1 text-[9px] text-muted-foreground/55">

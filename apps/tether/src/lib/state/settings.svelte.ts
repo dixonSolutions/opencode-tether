@@ -27,6 +27,7 @@ export interface SettingsData {
   favorites: string[];
   lastAgent: string;
   lastModel: ModelRef | null;
+  lastDirectory: Record<string, string>;
 }
 
 const DEFAULTS: SettingsData = {
@@ -45,7 +46,8 @@ const DEFAULTS: SettingsData = {
   haptics: true,
   favorites: [],
   lastAgent: 'build',
-  lastModel: null
+  lastModel: null,
+  lastDirectory: {}
 };
 
 function uid(): string {
@@ -73,6 +75,7 @@ class SettingsState {
   favorites = $state<string[]>([]);
   lastAgent = $state('build');
   lastModel = $state<ModelRef | null>(null);
+  lastDirectory = $state<Record<string, string>>({});
   hydrated = $state(false);
 
   async init(): Promise<void> {
@@ -105,7 +108,8 @@ class SettingsState {
           haptics: this.haptics,
           favorites: [...this.favorites],
           lastAgent: this.lastAgent,
-          lastModel: this.lastModel ? { ...this.lastModel } : null
+          lastModel: this.lastModel ? { ...this.lastModel } : null,
+          lastDirectory: { ...this.lastDirectory }
         };
         persistentStore.set('settings', snapshot);
       });

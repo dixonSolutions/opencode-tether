@@ -57,6 +57,14 @@ function sessionUpdated(session: Session): number {
   return session.time?.updated ?? session.time?.created ?? 0;
 }
 
+function trimTrailingSlash(path: string): string {
+  return path.length > 1 ? path.replace(/\/+$/, '') : path;
+}
+
+function sameDirectory(a: string | undefined, b: string): boolean {
+  return !!a && trimTrailingSlash(a) === trimTrailingSlash(b);
+}
+
 export class AppState {
   phase = $state<Phase>('boot');
   eventState = $state<EventState>('off');
@@ -90,6 +98,7 @@ export class AppState {
   drafts = $state<Record<string, string>>({});
   selectedAgent = $state('build');
   selectedModel = $state<ModelRef | null>(null);
+  selectedDirectory = $state<string | null>(null);
   hostAuth = $state<{ username: string; password: string } | null>(null);
   booted = $state(false);
 
@@ -141,19 +150,51 @@ export class AppState {
     );
   }
 
+  get directoryOptions(): string[] {
+    const paths = [
+      ...this.projects.flatMap((project) => [project.worktree, ...(project.sandboxes ?? [])]),
+      ...this.sessions.map((session) => session.directory)
+    ];
+    const unique = new Map<string, string>();
+    for (const path of paths) {
+      if (!path || path === 'global') continue;
+      const clean = trimTrailingSlash(path);
+      if (!unique.has(clean)) unique.set(clean, clean);
+    }
+    return [...unique.values()].sort((a, b) => a.localeCompare(b));
+  }
+
   get visibleAgents(): Agent[] {
     return this.agents.filter((agent) => !agent.hidden && (agent.mode === 'primary' || agent.mode === 'all'));
   }
 
   get filteredSessions(): Session[] {
     const query = this.search.trim().toLowerCase();
-    if (!query) return this.sessions;
-    return this.sessions.filter(
+    const scoped = this.selectedDirectory
+      ? this.sessions.filter((session) => sameDirectory(session.directory, this.selectedDirectory!))
+      : this.sessions;
+    if (!query) return scoped;
+    return scoped.filter(
       (session) =>
         (session.title ?? '').toLowerCase().includes(query) ||
         (session.directory ?? '').toLowerCase().includes(query) ||
         (session.slug ?? '').toLowerCase().includes(query)
     );
+  }
+
+  private directoryKey(): string {
+    if (this.hostMode) return 'host';
+    return this.activeRemote?.id ?? 'remote';
+  }
+
+  setDirectory(directory: string | null): void {
+    const value = directory?.trim() ? trimTrailingSlash(directory.trim()) : null;
+    this.selectedDirectory = value;
+    const next = { ...settings.lastDirectory };
+    const key = this.directoryKey();
+    if (value) next[key] = value;
+    else delete next[key];
+    settings.lastDirectory = next;
   }
 
   async boot(): Promise<void> {
@@ -352,6 +393,7 @@ export class AppState {
     const configModel = parseModel(typeof this.config?.model === 'string' ? this.config.model : undefined);
     this.selectedModel = settings.lastModel ?? configModel ?? null;
     this.selectedAgent = this.selectedAgent || settings.lastAgent || 'build';
+    this.selectedDirectory = settings.lastDirectory[this.directoryKey()] ?? null;
 
     this.sessionsLoading = false;
     if (sessions.status === 'rejected') {
@@ -386,7 +428,6 @@ export class AppState {
 
     const session = this.sessions.find((item) => item.id === sessionID);
     if (session?.agent) this.selectedAgent = session.agent;
-    if (session?.model) this.selectedModel = { providerID: session.model.providerID, modelID: session.model.id };
     await Promise.all([this.refreshMessages(sessionID), this.refreshTodos(sessionID), this.refreshDiffs(sessionID)]);
   }
 
@@ -436,7 +477,8 @@ export class AppState {
       const body: Record<string, unknown> = {};
       if (this.selectedAgent) body.agent = this.selectedAgent;
       if (this.selectedModel) body.model = { id: this.selectedModel.modelID, providerID: this.selectedModel.providerID };
-      const session = await this.client.post<Session>('/session', body, 30_000);
+      const query = this.selectedDirectory ? `?directory=${encodeURIComponent(this.selectedDirectory)}` : '';
+      const session = await this.client.post<Session>(`/session${query}`, body, 30_000);
       this.sessions = [session, ...this.sessions];
       this.messages = [];
       await this.openSession(session.id, { replace: true });

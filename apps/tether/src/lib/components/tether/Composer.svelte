@@ -3,6 +3,7 @@
   import { settings } from '$lib/state/settings.svelte';
   import ModelPicker from './ModelPicker.svelte';
   import AgentPicker from './AgentPicker.svelte';
+  import ProjectPicker from './ProjectPicker.svelte';
   import { Root as Button } from '$lib/components/ui/button/index.js';
   import { cn } from '$lib/utils';
   import { toast } from 'svelte-sonner';
@@ -15,6 +16,8 @@
   import FileText from '@lucide/svelte/icons/file-text';
   import ImageIcon from '@lucide/svelte/icons/image';
   import CommandIcon from '@lucide/svelte/icons/command';
+  import Folder from '@lucide/svelte/icons/folder';
+  import { projectName } from '$lib/platform';
 
   interface Attachment {
     mime: string;
@@ -29,6 +32,7 @@
   let fileInput: HTMLInputElement;
   let modelOpen = $state(false);
   let agentOpen = $state(false);
+  let projectOpen = $state(false);
   let composing = $state(false);
   let dragging = $state(false);
   let commandIndex = $state(0);
@@ -52,6 +56,7 @@
 
   const modelLabel = $derived(app.selectedModel ? app.selectedModel.modelID.split('/').pop() ?? app.selectedModel.modelID : 'default');
   const agentLabel = $derived(app.selectedAgent || 'build');
+  const directoryLabel = $derived(app.selectedDirectory ? projectName(app.selectedDirectory) : 'all projects');
 
   $effect(() => {
     const sessionID = app.selectedSessionId;
@@ -290,6 +295,15 @@
         <button
           type="button"
           class="hidden h-8 items-center gap-1.5 rounded-xl px-2 text-[10.5px] text-muted-foreground hover:bg-muted hover:text-foreground sm:flex"
+          onclick={() => (projectOpen = true)}
+          title="Project and directory"
+        >
+          <Folder class="size-3.5" />
+          <span class="max-w-24 truncate">{directoryLabel}</span>
+        </button>
+        <button
+          type="button"
+          class="hidden h-8 items-center gap-1.5 rounded-xl px-2 text-[10.5px] text-muted-foreground hover:bg-muted hover:text-foreground sm:flex"
           onclick={() => (agentOpen = true)}
           title="Agent"
         >
@@ -333,6 +347,8 @@
         <button type="button" class="rounded px-1 py-0.5 active:bg-muted" onclick={() => (modelOpen = true)}>{modelLabel}</button>
         <span class="mx-0.5">·</span>
         <button type="button" class="rounded px-1 py-0.5 active:bg-muted" onclick={() => (agentOpen = true)}>{agentLabel}</button>
+        <span class="mx-0.5">·</span>
+        <button type="button" class="rounded px-1 py-0.5 active:bg-muted" onclick={() => (projectOpen = true)}>{directoryLabel}</button>
       </span>
       <span>{text.trim() ? `${text.trim().length} chars` : ''}</span>
     </div>
@@ -341,3 +357,4 @@
 
 <ModelPicker bind:open={modelOpen} />
 <AgentPicker bind:open={agentOpen} />
+<ProjectPicker bind:open={projectOpen} />

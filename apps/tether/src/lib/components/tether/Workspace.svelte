@@ -7,6 +7,7 @@
   import RemotesSheet from './RemotesSheet.svelte';
   import SettingsSheet from './SettingsSheet.svelte';
   import * as Sheet from '$lib/components/ui/sheet/index.js';
+  import { swipe } from '$lib/gestures';
   import { tick } from 'svelte';
 
   let sidebarOpen = $state(false);
@@ -23,6 +24,12 @@
     query.addEventListener('change', onChange);
     return () => query.removeEventListener('change', onChange);
   });
+
+  function openSidebarBySwipe() {
+    if (desktop || sidebarOpen) return;
+    app.haptic(6);
+    sidebarOpen = true;
+  }
 
   function openPanel() {
     if (desktop) panelOpen = !panelOpen;
@@ -63,7 +70,7 @@
       />
   </div>
 
-  <main class="flex min-w-0 flex-1 flex-col">
+  <main class="flex min-w-0 flex-1 flex-col" use:swipe={{ onSwipeRight: openSidebarBySwipe }}>
     <ChatView
       onOpenSidebar={() => (sidebarOpen = true)}
       onOpenPanel={openPanel}
@@ -81,23 +88,27 @@
 
 <Sheet.Root bind:open={sidebarOpen}>
   <Sheet.Content side="left" class="w-[86%] max-w-[330px] gap-0 border-r border-border/60 p-0">
-    <SidebarContent
-      onOpenRemotes={() => {
-        sidebarOpen = false;
-        setTimeout(() => (remotesOpen = true), 160);
-      }}
-      onOpenSettings={() => {
-        sidebarOpen = false;
-        setTimeout(() => (settingsOpen = true), 160);
-      }}
-      onNavigate={() => (sidebarOpen = false)}
-    />
+    <div class="h-full" use:swipe={{ onSwipeLeft: () => (sidebarOpen = false) }}>
+      <SidebarContent
+        onOpenRemotes={() => {
+          sidebarOpen = false;
+          setTimeout(() => (remotesOpen = true), 160);
+        }}
+        onOpenSettings={() => {
+          sidebarOpen = false;
+          setTimeout(() => (settingsOpen = true), 160);
+        }}
+        onNavigate={() => (sidebarOpen = false)}
+      />
+    </div>
   </Sheet.Content>
 </Sheet.Root>
 
 <Sheet.Root bind:open={panelSheetOpen}>
   <Sheet.Content side="right" class="w-full max-w-full gap-0 p-0 sm:max-w-md">
-    <SessionPanel onClose={() => (panelSheetOpen = false)} />
+    <div class="h-full" use:swipe={{ onSwipeRight: () => (panelSheetOpen = false) }}>
+      <SessionPanel onClose={() => (panelSheetOpen = false)} />
+    </div>
   </Sheet.Content>
 </Sheet.Root>
 

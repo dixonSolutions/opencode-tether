@@ -73,6 +73,15 @@ export async function copyText(text: string): Promise<boolean> {
 }
 
 export async function requestNotificationPermission(): Promise<boolean> {
+  if (isTauri()) {
+    try {
+      const { isPermissionGranted, requestPermission } = await import('@tauri-apps/plugin-notification');
+      if (await isPermissionGranted()) return true;
+      return (await requestPermission()) === 'granted';
+    } catch {
+      return false;
+    }
+  }
   if (typeof Notification === 'undefined') return false;
   if (Notification.permission === 'granted') return true;
   if (Notification.permission === 'denied') return false;
@@ -80,7 +89,17 @@ export async function requestNotificationPermission(): Promise<boolean> {
   return result === 'granted';
 }
 
-export function notify(title: string, body: string): void {
+export async function notify(title: string, body: string): Promise<void> {
+  if (isTauri()) {
+    try {
+      const { isPermissionGranted, sendNotification } = await import('@tauri-apps/plugin-notification');
+      if (!(await isPermissionGranted())) return;
+      sendNotification({ title, body });
+      return;
+    } catch {
+      return;
+    }
+  }
   if (typeof Notification === 'undefined' || Notification.permission !== 'granted') return;
   try {
     new Notification(title, { body, icon: '/icon-192.png', tag: 'opencode-tether' });
