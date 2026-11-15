@@ -615,14 +615,19 @@ export class AppState {
       this.client.get<Agent[]>('/agent', 15_000),
       this.client.get<Command[]>('/command', 15_000),
       this.client.get<Config>('/config', 15_000),
-      this.client.get<Record<string, SessionStatus>>('/session/status', 15_000)
+      this.client.get<Record<string, SessionStatus>>('/session/status', 15_000),
+      // Requests already waiting when the app connects are not replayed as events, so load them here.
+      this.client.get<PermissionRequest[]>('/permission', 15_000),
+      this.client.get<QuestionRequest[]>('/question', 15_000)
     ]);
-    const [sessions, agents, commands, config, statuses] = results;
+    const [sessions, agents, commands, config, statuses, permissions, questions] = results;
     if (sessions.status === 'fulfilled') this.sessions = [...sessions.value].sort((a, b) => sessionUpdated(b) - sessionUpdated(a));
     if (agents.status === 'fulfilled') this.agents = agents.value;
     if (commands.status === 'fulfilled') this.commands = commands.value.filter((command) => command.name);
     if (config.status === 'fulfilled') this.config = config.value;
     if (statuses.status === 'fulfilled') this.statuses = { ...statuses.value };
+    if (permissions.status === 'fulfilled') this.permissions = permissions.value;
+    if (questions.status === 'fulfilled') this.questions = questions.value;
 
     const configModel = parseModel(typeof this.config?.model === 'string' ? this.config.model : undefined);
     this.selectedModel = settings.lastModel ?? configModel ?? null;
