@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 use anyhow::{bail, Context, Result};
 use axum::body::Body;
-use axum::extract::{ConnectInfo, Request, State};
+use axum::extract::{ConnectInfo, Query, Request, State};
 use axum::http::header::{
     ACCESS_CONTROL_ALLOW_CREDENTIALS, ACCESS_CONTROL_ALLOW_HEADERS, ACCESS_CONTROL_ALLOW_METHODS,
     ACCESS_CONTROL_ALLOW_ORIGIN, ACCESS_CONTROL_MAX_AGE, CACHE_CONTROL, CONTENT_TYPE, HOST, ORIGIN,
@@ -19,11 +19,13 @@ use base64::Engine;
 use serde::{Deserialize, Serialize};
 use serde_json::{json, Value};
 use tokio::process::Child;
+use tower_http::compression::{predicate::DefaultPredicate, CompressionLayer};
 use tracing::{error, info, warn};
 use url::Url;
 
 use crate::auth::{Auth, AuthKind};
 use crate::config::Config;
+use crate::folders;
 use crate::proxy;
 use crate::web::WebAssets;
 
@@ -91,10 +93,9 @@ pub async fn run(config: Config, config_path: std::path::PathBuf) -> Result<()> 
     poll_upstream_once(&state).await;
     spawn_upstream_poller(state.clone());
 
-    let app = router(state.clone()).layer(middleware::from_fn_with_state(
-        state.clone(),
-        cors_middleware,
-    ));
+    let app = router(state.clone())
+        .layer(middleware::from_fn_with_state(state.clone(), cors_middleware))
+        .layer(compression_layer());
 
     let listener = tokio::net::TcpListener::bind(bind)
         .await
@@ -135,6 +136,7 @@ fn router(state: AppState) -> Router {
         .route("/api/tether/logout", post(logout_handler))
         .route("/api/tether/session", get(session_handler))
         .route("/api/tether/health", get(health_handler))
+        .route("/api/tether/folders/search", get(folder_search_handler))
         .route("/pty/{pty_id}/connect", get(proxy::websocket))
         .route("/api/pty/{pty_id}/connect", get(proxy::websocket))
         .route("/healthz", get(|| async { Json(json!({ "ok": true })) }))
@@ -235,6 +237,44 @@ async fn session_handler(State(state): State<AppState>, headers: HeaderMap) -> R
     .into_response()
 }
 
+#[derive(Deserialize)]
+struct FolderSearchParams {
+    root: String,
+    q: String,
+}
+
+async fn folder_search_handler(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    Query(params): Query<FolderSearchParams>,
+) -> Response {
+    if state.auth.authorize(&headers).is_none() {
+        return unauthorized();
+    }
+    if !std::path::Path::new(&params.root).is_absolute() {
+        return (
+            StatusCode::BAD_REQUEST,
+            Json(json!({ "name": "BadRequest", "data": { "message": "root must be an absolute path" } })),
+        )
+            .into_response();
+    }
+    let root = std::path::PathBuf::from(params.root);
+    let query = params.q;
+    match tokio::task::spawn_blocking(move || folders::search(&root, &query)).await {
+        Ok(result) => Json(result).into_response(),
+        Err(error) => {
+            warn!(%error, "folder search task failed");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
+        }
+    }
+}
+
+/// Gzip or brotli for API JSON and the web bundle. `DefaultPredicate` leaves out
+/// server-sent events, which a compressor would buffer until the stream ends.
+fn compression_layer() -> CompressionLayer<DefaultPredicate> {
+    CompressionLayer::new().compress_when(DefaultPredicate::new())
+}
+
 async fn health_handler(State(state): State<AppState>, headers: HeaderMap) -> Response {
     if state.auth.authorize(&headers).is_none() {
         return unauthorized();
@@ -291,7 +331,7 @@ async fn gateway(State(state): State<AppState>, request: Request<Body>) -> Respo
         Body::from(asset.bytes)
     };
     let mut response = Response::new(body);
-    if let Ok(value) = HeaderValue::from_str(asset.mime) {
+    if let Ok(value) = HeaderValue::from_str(&asset.mime) {
         response.headers_mut().insert(CONTENT_TYPE, value);
     }
     if let Ok(value) = HeaderValue::from_str(asset.cache) {

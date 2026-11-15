@@ -28,7 +28,11 @@ export interface SettingsData {
   lastAgent: string;
   lastModel: ModelRef | null;
   lastDirectory: Record<string, string>;
+  /** Most recently chosen folders per host, newest first. */
+  recentDirectories: Record<string, string[]>;
 }
+
+const RECENT_DIRECTORY_LIMIT = 8;
 
 const DEFAULTS: SettingsData = {
   remotes: [],
@@ -47,7 +51,8 @@ const DEFAULTS: SettingsData = {
   favorites: [],
   lastAgent: 'build',
   lastModel: null,
-  lastDirectory: {}
+  lastDirectory: {},
+  recentDirectories: {}
 };
 
 function uid(): string {
@@ -76,6 +81,7 @@ class SettingsState {
   lastAgent = $state('build');
   lastModel = $state<ModelRef | null>(null);
   lastDirectory = $state<Record<string, string>>({});
+  recentDirectories = $state<Record<string, string[]>>({});
   hydrated = $state(false);
 
   async init(): Promise<void> {
@@ -109,7 +115,10 @@ class SettingsState {
           favorites: [...this.favorites],
           lastAgent: this.lastAgent,
           lastModel: this.lastModel ? { ...this.lastModel } : null,
-          lastDirectory: { ...this.lastDirectory }
+          lastDirectory: { ...this.lastDirectory },
+          recentDirectories: Object.fromEntries(
+            Object.entries(this.recentDirectories).map(([key, list]) => [key, [...list]])
+          )
         };
         persistentStore.set('settings', snapshot);
       });
@@ -172,6 +181,19 @@ class SettingsState {
 
   setTheme(theme: ThemeMode): void {
     this.theme = theme;
+  }
+
+  rememberDirectory(key: string, directory: string): void {
+    const rest = (this.recentDirectories[key] ?? []).filter((item) => item !== directory);
+    this.recentDirectories = {
+      ...this.recentDirectories,
+      [key]: [directory, ...rest].slice(0, RECENT_DIRECTORY_LIMIT)
+    };
+  }
+
+  forgetDirectory(key: string, directory: string): void {
+    const rest = (this.recentDirectories[key] ?? []).filter((item) => item !== directory);
+    this.recentDirectories = { ...this.recentDirectories, [key]: rest };
   }
 }
 

@@ -17,6 +17,20 @@
   let renameValue = $state('');
   let renameTarget = $state<Session | null>(null);
 
+  /** Sessions blocked on an answer, whatever folder or search is showing. */
+  const waiting = $derived.by(() => {
+    const kinds = new Map<string, string[]>();
+    const add = (sessionID: string, kind: string) => kinds.set(sessionID, [...(kinds.get(sessionID) ?? []), kind]);
+    for (const request of app.permissions) add(request.sessionID, request.permission);
+    for (const question of app.questions) add(question.sessionID, 'question');
+    const rows: Array<{ session: Session; kinds: string[] }> = [];
+    for (const [id, list] of kinds) {
+      const session = app.sessions.find((item) => item.id === id);
+      if (session) rows.push({ session, kinds: list });
+    }
+    return rows;
+  });
+
   const groups = $derived.by(() => {
     const day = 86_400_000;
     const now = new Date();
@@ -99,6 +113,31 @@
   </div>
 
   <div class="tether-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 pb-3">
+    {#if waiting.length}
+      <div class="mt-1">
+        <div class="px-3 py-1.5 text-[11px] font-semibold uppercase tracking-[0.12em] text-amber-300/80">
+          Needs you <span class="font-normal tracking-normal text-amber-300/50">{waiting.length}</span>
+        </div>
+        <div class="space-y-1">
+          {#each waiting as entry (entry.session.id)}
+            <button
+              type="button"
+              class="flex min-h-14 w-full items-center gap-2.5 rounded-xl border border-amber-500/20 bg-amber-500/[0.05] px-3 py-2 text-left hover:bg-amber-500/10"
+              onclick={() => select(entry.session)}
+            >
+              <span class="size-2 shrink-0 rounded-full bg-amber-400" aria-hidden="true"></span>
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-sm font-medium">{entry.session.title ?? 'Untitled session'}</span>
+                <span class="block truncate text-xs text-amber-200/70">
+                  Waiting for {[...new Set(entry.kinds)].join(', ')}
+                </span>
+              </span>
+            </button>
+          {/each}
+        </div>
+      </div>
+    {/if}
+
     {#if app.sessionsLoading && app.sessions.length === 0}
       <div class="space-y-1.5 px-1 pt-2">
         {#each Array(6) as _}

@@ -7,6 +7,7 @@ const PROJECT = `${PROJECTS}/test-project`;
 
 interface MockOptions {
   onSession?: (url: URL) => void;
+  permissions?: unknown[];
 }
 
 function node(name: string, parent: string) {
@@ -67,7 +68,8 @@ async function mockBackend(page: Page, options: MockOptions = {}) {
       ]);
     }
     if (path === '/provider') return json({ all: [] });
-    if (path === '/permission' || path === '/question') return json([]);
+    if (path === '/permission') return json(options.permissions ?? []);
+    if (path === '/question') return json([]);
     if (path === '/event') {
       return route.fulfill({ status: 200, contentType: 'text/event-stream', body: ': connected\n\n' });
     }
@@ -234,6 +236,38 @@ test('project picker starts at home, searches folders, and creates the session i
   await expect(page.getByRole('button', { name: 'Choose folder' })).toContainText('test-project');
   await page.getByRole('button', { name: 'New session', exact: true }).first().click();
   await expect.poll(() => createdDirectory).toBe(PROJECT);
+});
+
+test('recent folders are offered after a choice, open in one tap, and can be removed', async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page, baseURL!);
+  await page.getByRole('button', { name: 'Choose folder' }).click();
+  await dialog(page).getByRole('textbox', { name: 'Search folders' }).fill('test-project');
+  await dialog(page).locator('button').filter({ hasText: 'Projects/test-project' }).first().click();
+  await dialog(page).getByRole('button', { name: 'Use this folder', exact: true }).click();
+  await expect(dialog(page)).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Choose folder' }).click();
+  await expect(dialog(page).getByText('Recent', { exact: true })).toBeVisible();
+  const recent = dialog(page).getByRole('button', { name: /test-project/ }).first();
+  await expect(recent).toBeVisible();
+
+  await dialog(page).getByRole('button', { name: `Remove ${PROJECT} from recent folders` }).click();
+  await expect(dialog(page).getByText('Recent', { exact: true })).toHaveCount(0);
+});
+
+test('sessions waiting on a permission are pinned under Needs you and open on click', async ({ page, baseURL }) => {
+  await page.setViewportSize({ width: 1440, height: 900 });
+  await open(page, baseURL!, {
+    permissions: [
+      { id: 'per_1', sessionID: 'ses_two', permission: 'bash', patterns: ['npm test'], metadata: {}, always: ['npm *'] }
+    ]
+  });
+  await expect(page.getByText('Needs you', { exact: false }).first()).toBeVisible();
+  const waiting = page.getByRole('button', { name: /Add directory picker.*Waiting for bash/ });
+  await expect(waiting).toBeVisible();
+  await waiting.click();
+  await expect(page.getByRole('heading', { name: 'Add directory picker' })).toBeVisible();
 });
 
 test('layout has no horizontal overflow and touch controls reach 44px at phone, tablet, and desktop widths', async ({ page, baseURL }) => {

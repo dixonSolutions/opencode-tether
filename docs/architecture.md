@@ -36,7 +36,8 @@ The opencode client (`src/lib/api/client.ts`) is a thin typed fetch wrapper. Web
 - Rust, `axum` 0.8, `tokio`, `reqwest`.
 - `rust-embed` embeds `apps/tether/build` into the binary. A `web.root` config can override it from disk for development.
 - Argon2 password hashing, signed HttpOnly cookies, optional Basic auth, constant-time username checks, and a login rate limiter.
-- Reverse proxy for the opencode HTTP API, including streaming SSE.
+- Reverse proxy for the opencode HTTP API, including streaming SSE. Responses are gzip/brotli compressed except event streams, which must reach the browser unbuffered.
+- Folder search for the picker (`/api/tether/folders/search`): a bounded walk of up to three folder levels, 400 folders, 60 matches and 1.5 s per request, skipping hidden and build folders.
 - PTY WebSocket proxy with ticket or Basic-derived upstream auth.
 - Upstream process supervisor: expands the command, starts it, waits for `/global/health`, logs, and stops it on shutdown.
 - GitHub release self-updater with SHA-256 verification.

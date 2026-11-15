@@ -16,6 +16,8 @@
   import CircleAlert from '@lucide/svelte/icons/circle-alert';
   import CornerDownLeft from '@lucide/svelte/icons/corner-down-left';
   import ChevronRight from '@lucide/svelte/icons/chevron-right';
+  import Clock from '@lucide/svelte/icons/clock';
+  import { projectName } from '$lib/platform';
 
   let { open = $bindable(false) }: { open?: boolean } = $props();
   let query = $state('');
@@ -92,6 +94,15 @@
     open = false;
   }
 
+  /** Enter opens the first match, so a search narrows to a folder in one keystroke. */
+  function onSearchKey(event: KeyboardEvent) {
+    if (event.key !== 'Enter' || absoluteQuery) return;
+    const first = filtered[0] ? join(currentPath, filtered[0].name) : searchOnly[0] ? join(currentPath, searchOnly[0]) : null;
+    if (!first) return;
+    event.preventDefault();
+    go(first);
+  }
+
   function go(path: string) {
     if (!path.trim()) return;
     query = '';
@@ -152,7 +163,7 @@
     <div class="space-y-2.5 px-3 pt-3 sm:px-4">
       <div class="relative">
         <Search class="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground/70" />
-        <Input bind:value={query} placeholder="Search folders here and below…" class="h-11 pl-9 pr-12 text-sm" aria-label="Search folders" />
+        <Input bind:value={query} onkeydown={onSearchKey} placeholder="Search folders here and below…" class="h-11 pl-9 pr-12 text-sm" aria-label="Search folders" />
         {#if query}
           <button type="button" class="absolute right-1 top-1/2 grid size-10 -translate-y-1/2 place-items-center rounded-lg text-muted-foreground hover:text-foreground" onclick={() => (query = '')} aria-label="Clear search">
             <X class="size-4" />
@@ -178,6 +189,32 @@
     </div>
 
     <div class="tether-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-2 py-2 sm:px-3">
+      {#if !query.trim() && app.recentDirectories.length && !browse.error}
+        <div class="px-2 pb-1 text-xs font-semibold uppercase tracking-[0.12em] text-muted-foreground/50">Recent</div>
+        {#each app.recentDirectories as recent (recent)}
+          <div class="flex min-h-14 items-center gap-1 rounded-xl hover:bg-muted/70">
+            <button
+              type="button"
+              class="flex min-h-14 min-w-0 flex-1 items-center gap-3 rounded-xl px-3 py-2 text-left"
+              onclick={() => choose(recent)}
+              title={recent}
+            >
+              <span class="grid size-9 shrink-0 place-items-center rounded-lg border border-border/60 bg-muted/40 text-muted-foreground">
+                <Clock class="size-4" />
+              </span>
+              <span class="min-w-0 flex-1">
+                <span class="block truncate text-[15px] font-medium">{projectName(recent)}</span>
+                <span class="block truncate text-xs text-muted-foreground/60">{recent}</span>
+              </span>
+            </button>
+            <Button variant="ghost" size="icon-sm" class="mr-1 shrink-0" onclick={() => app.forgetRecentDirectory(recent)} aria-label={`Remove ${recent} from recent folders`} title="Remove from recent">
+              <X class="size-4" />
+            </Button>
+          </div>
+        {/each}
+        <div class="mx-2 my-2 h-px bg-border/60"></div>
+      {/if}
+
       {#if browse.error}
         <div class="m-2 rounded-xl border border-red-500/25 bg-red-500/[0.06] p-4">
           <div class="flex items-start gap-2.5 text-sm text-red-200/90">

@@ -63,6 +63,13 @@ fn is_hop_by_hop(name: &str) -> bool {
     HOP_BY_HOP.iter().any(|hop| name.eq_ignore_ascii_case(hop))
 }
 
+/// Headers the proxy sets on every event stream, so they are not copied from upstream.
+fn is_stream_header(name: &str) -> bool {
+    name.eq_ignore_ascii_case("cache-control")
+        || name.eq_ignore_ascii_case("x-accel-buffering")
+        || name.eq_ignore_ascii_case("connection")
+}
+
 fn filter_request_headers(headers: &HeaderMap) -> Vec<(HeaderName, String)> {
     headers
         .iter()
@@ -125,19 +132,23 @@ pub async fn proxy_http(state: AppState, request: Request<Body>) -> Response<Bod
     };
 
     let status = StatusCode::from_u16(response.status().as_u16()).unwrap_or(StatusCode::BAD_GATEWAY);
-    let mut output = Response::builder().status(status);
-    for (name, value) in response.headers() {
-        if is_hop_by_hop(name.as_str()) || name == axum::http::header::CONTENT_LENGTH {
-            continue;
-        }
-        output = output.header(name.as_str(), value.as_bytes());
-    }
     let is_sse = response
         .headers()
         .get(axum::http::header::CONTENT_TYPE)
         .and_then(|value| value.to_str().ok())
         .map(|value| value.starts_with("text/event-stream"))
         .unwrap_or(false);
+    let mut output = Response::builder().status(status);
+    for (name, value) in response.headers() {
+        // For event streams the proxy sets these itself below; copying upstream's too would send them twice.
+        if is_hop_by_hop(name.as_str())
+            || name == axum::http::header::CONTENT_LENGTH
+            || (is_sse && is_stream_header(name.as_str()))
+        {
+            continue;
+        }
+        output = output.header(name.as_str(), value.as_bytes());
+    }
     if is_sse {
         output = output
             .header("Cache-Control", "no-cache, no-transform")

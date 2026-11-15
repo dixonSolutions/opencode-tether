@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+- Faster host: API JSON and the web bundle are gzip/brotli compressed; event streams are never compressed, so output still streams as it is written.
+- Folder search runs on the host in one request (`/api/tether/folders/search`) instead of one request per folder from the browser. Hosts without the endpoint fall back to the browser walk.
+- Event stream watchdog: a stream that goes silent is probed, then reconnected, and state is reloaded after a reconnect, so agents no longer look stuck until the page is reopened.
+- The folder picker lists recently chosen folders per host, and Enter in the search opens the first match.
+- Sessions waiting on a permission or question are pinned under "Needs you" in the sidebar.
+- Fixed a per-request memory leak when serving uncommon file types, and duplicated event-stream headers.
+
 ## 0.3.0 — 2026-11-03
 
 Comfortable, adaptive UI release.
