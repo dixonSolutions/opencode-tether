@@ -1,5 +1,6 @@
 mod auth;
 mod config;
+mod folders;
 mod host;
 mod proxy;
 mod update;

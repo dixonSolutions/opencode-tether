@@ -30,6 +30,13 @@ import { setMode } from 'mode-watcher';
 export type Phase = 'boot' | 'needs-remote' | 'host-login' | 'connecting' | 'ready' | 'offline' | 'unauthorized' | 'error';
 export type EventState = 'off' | 'connecting' | 'live' | 'reconnecting';
 
+/** How often an open event stream is checked for silence. */
+const STALL_CHECK_MS = 15_000;
+/** Silence after which the host is probed. */
+const STALL_AFTER_MS = 30_000;
+/** Silence after which the stream is dropped even if the host still answers. */
+const DEAD_AFTER_MS = 120_000;
+
 const SESSION_POLL_MS = 20_000;
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -198,6 +205,15 @@ export class AppState {
     return this.activeRemote?.id ?? 'remote';
   }
 
+  /** Folders chosen on the current host, newest first. */
+  get recentDirectories(): string[] {
+    return settings.recentDirectories[this.directoryKey()] ?? [];
+  }
+
+  forgetRecentDirectory(directory: string): void {
+    settings.forgetDirectory(this.directoryKey(), directory);
+  }
+
   setDirectory(directory: string | null): void {
     const base = this.directoryBrowser.path ?? this.directoryBrowser.home ?? '/';
     const home = this.directoryBrowser.home ?? base;
@@ -205,8 +221,12 @@ export class AppState {
     this.selectedDirectory = value;
     const next = { ...settings.lastDirectory };
     const key = this.directoryKey();
-    if (value) next[key] = value;
-    else delete next[key];
+    if (value) {
+      next[key] = value;
+      settings.rememberDirectory(key, value);
+    } else {
+      delete next[key];
+    }
     settings.lastDirectory = next;
   }
 
@@ -288,6 +308,27 @@ export class AppState {
     }
     const base = this.directoryBrowser.path ?? this.directoryBrowser.home ?? '/';
     this.directoryBrowser = { ...this.directoryBrowser, searching: true };
+    if (this.hostMode) {
+      // One request, walked on the host. Hosts from before this endpoint answer 404 and
+      // fall through to the browser walk below.
+      try {
+        const found = await this.client.get<{ results: string[] }>(
+          `/api/tether/folders/search?root=${encodeURIComponent(base)}&q=${encodeURIComponent(q)}`,
+          8_000
+        );
+        if (generation === this.searchGeneration) {
+          const matches = this.directoryBrowser.path === base ? found.results : [];
+          this.directoryBrowser = { ...this.directoryBrowser, searchResults: matches, searching: false };
+        }
+        return;
+      } catch (error) {
+        if (generation !== this.searchGeneration) return;
+        if (error instanceof ApiError && error.status === 401) {
+          this.directoryBrowser = { ...this.directoryBrowser, searchResults: [], searching: false };
+          return;
+        }
+      }
+    }
     const skip = new Set([
       'node_modules',
       '.git',
@@ -1020,13 +1061,28 @@ export class AppState {
     }
   }
 
+  /**
+   * Keeps the event stream open. A stream can stop delivering without ending or
+   * erroring (a tether restart, a sleeping phone, a stalled upstream), which is why
+   * the loop also watches for silence and reconnects instead of waiting forever.
+   */
   private async runEventLoop(gen: number, signal: AbortSignal): Promise<void> {
     let backoff = 1000;
     while (gen === this.eventGeneration && !signal.aborted && this.client) {
       this.eventState = this.reconnectAttempt === 0 ? 'connecting' : 'reconnecting';
+      const attempt = new AbortController();
+      const cancelAttempt = () => attempt.abort();
+      signal.addEventListener('abort', cancelAttempt, { once: true });
+      let lastFrame = Date.now();
+      const watchdog = setInterval(() => void this.checkStalled(attempt, () => lastFrame), STALL_CHECK_MS);
       try {
-        for await (const event of this.client.stream('/event', signal)) {
+        for await (const event of this.client.stream('/event', attempt.signal)) {
           if (gen !== this.eventGeneration) return;
+          lastFrame = Date.now();
+          if (this.reconnectAttempt > 0) {
+            // Events emitted while the stream was down are gone; reload what they would have changed.
+            void this.refreshAll();
+          }
           this.eventState = 'live';
           this.reconnectAttempt = 0;
           backoff = 1000;
@@ -1040,6 +1096,9 @@ export class AppState {
           return;
         }
         this.eventState = 'reconnecting';
+      } finally {
+        clearInterval(watchdog);
+        signal.removeEventListener('abort', cancelAttempt);
       }
       if (signal.aborted || gen !== this.eventGeneration) return;
       if (!settings.autoReconnect) {
@@ -1049,6 +1108,26 @@ export class AppState {
       this.reconnectAttempt++;
       await sleep(backoff, signal);
       backoff = Math.min(backoff * 1.8, 20_000);
+    }
+  }
+
+  /**
+   * Called every STALL_CHECK_MS while a stream is open. Silence alone is normal (an agent
+   * can think for minutes), so a quiet stream is probed: if the host still answers, wait;
+   * if it does not, or nothing has arrived for DEAD_AFTER_MS, drop the stream and reconnect.
+   */
+  private async checkStalled(attempt: AbortController, lastFrame: () => number): Promise<void> {
+    if (attempt.signal.aborted) return;
+    const silent = Date.now() - lastFrame();
+    if (silent < STALL_AFTER_MS) return;
+    if (silent >= DEAD_AFTER_MS) {
+      attempt.abort();
+      return;
+    }
+    try {
+      await this.client?.health();
+    } catch {
+      attempt.abort();
     }
   }
 

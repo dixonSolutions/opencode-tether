@@ -16,7 +16,7 @@ pub struct WebAssets {
 
 pub struct Asset {
     pub bytes: Vec<u8>,
-    pub mime: &'static str,
+    pub mime: String,
     pub cache: &'static str,
 }
 
@@ -85,7 +85,7 @@ impl WebAssets {
             output = output.replace("<head>", &format!("<head>{title}"));
         }
         base.bytes = output.into_bytes();
-        base.mime = "text/html; charset=utf-8";
+        base.mime = "text/html; charset=utf-8".to_string();
         base.cache = "no-cache";
         Some(base)
     }
@@ -105,7 +105,7 @@ impl WebAssets {
         };
         Some(Asset {
             bytes: file.data.into_owned(),
-            mime: leak_mime(mime.essence_str()),
+            mime: content_type(mime.essence_str()),
             cache,
         })
     }
@@ -131,27 +131,21 @@ fn read_disk(root: &Path, relative: &str) -> Option<Asset> {
     };
     Some(Asset {
         bytes,
-        mime: leak_mime(mime.essence_str()),
+        mime: content_type(mime.essence_str()),
         cache,
     })
 }
 
-fn leak_mime(value: &str) -> &'static str {
-    match value {
-        "text/html" => "text/html; charset=utf-8",
-        "text/css" => "text/css; charset=utf-8",
-        "text/javascript" => "text/javascript; charset=utf-8",
-        "application/javascript" => "text/javascript; charset=utf-8",
-        "application/json" => "application/json",
-        "image/svg+xml" => "image/svg+xml",
-        "image/png" => "image/png",
-        "image/x-icon" => "image/x-icon",
-        "image/vnd.microsoft.icon" => "image/x-icon",
-        "application/manifest+json" => "application/manifest+json",
-        "font/woff2" => "font/woff2",
-        "application/octet-stream" => "application/octet-stream",
-        "text/plain" => "text/plain; charset=utf-8",
-        other => Box::leak(other.to_string().into_boxed_str()),
+/// The `Content-Type` value for a bundled file. Owned, so an unusual extension costs
+/// one small allocation per response instead of a leaked string per request.
+fn content_type(essence: &str) -> String {
+    match essence {
+        "text/html" => "text/html; charset=utf-8".to_string(),
+        "text/css" => "text/css; charset=utf-8".to_string(),
+        "text/javascript" | "application/javascript" => "text/javascript; charset=utf-8".to_string(),
+        "text/plain" => "text/plain; charset=utf-8".to_string(),
+        "image/vnd.microsoft.icon" => "image/x-icon".to_string(),
+        other => other.to_string(),
     }
 }
 
