@@ -380,8 +380,8 @@
 .is-android *, .is-android *::before, .is-android *::after {
   transition-duration: 80ms !important;
   animation: none !important;
-  backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 .is-android svg, .is-android [class*="blur-"] {
   filter: none !important;
@@ -390,8 +390,8 @@
   box-shadow: none !important;
 }
 .is-android [data-slot="sheet-overlay"], .is-android [data-slot="dialog-overlay"] {
-  backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
+  backdrop-filter: none !important;
 }
 .is-android [data-slot="sheet-content"], .is-android [data-slot="dialog-content"] {
   box-shadow: none !important;
