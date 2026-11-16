@@ -374,8 +374,8 @@
 [data-slot="sheet-content"], [data-slot="dialog-content"],
 [data-slot="sheet-overlay"], [data-slot="dialog-overlay"],
 [data-slot="switch"], [data-slot="switch-thumb"], button {
-  animation-duration: 100ms;
-  transition-duration: 100ms;
+  animation-duration: 60ms;
+  transition-duration: 60ms;
 }
 .is-android *, .is-android *::before, .is-android *::after {
   transition-duration: 80ms !important;
