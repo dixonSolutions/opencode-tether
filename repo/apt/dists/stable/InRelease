@@ -1,0 +1,27 @@
+-----BEGIN PGP SIGNED MESSAGE-----
+Hash: SHA512
+
+Origin: opencode-tether
+Label: opencode-tether
+Suite: stable
+Codename: stable
+Architectures: amd64 arm64 armhf
+Components: main
+Description: opencode-tether host packages
+Date: Mon, 16 Nov 2026 03:49:36 +0000
+-----BEGIN PGP SIGNATURE-----
+
+iQIzBAEBCgAdFiEE64iYOVfCJTtKWiqaLpeRCNwX5nAFAmr6fVAACgkQLpeRCNwX
+5nBetQ//aFnP39dQAowcYpm5X5wHz35p8IM3XqzI5VzpMM0aBrPYs/ST0NsTzMrE
+McBk3BJGeF14VLlH2cMFOol+w2Uk7V4E3dQGTQeik20vA4Ln/HFwhLD3zFNrfdoK
+MlA2PbtpRRviVFnokSbG+rlLAhuYPC/nVIQK6glFLUgsZHi2k8n95NIbp0DgW1wr
+wlwPcmTeUZYyd5BylIn/PtHP4wbBVeQb3+ODWbhV5aIWunoW3wRJo+ArdwjtL8zv
+Z30brqzZ7E7Q07iqEcuBZJlHsocn7JzfXy3uchv4v7UE5WD+6dZ4n70YVw/av3xl
+mZZyoDpnIam1x5ttMqMmZTvHwW8UoD4RJLUepKEsQoZmNT2p58+tED99V8Viy5A+
+j2lHRuncTcCmRc1opMIDUbmF/NMB8dhl2Nz/V0tVFe+5pBdFl3mLl0gAWIw4ORAO
+MXMi86zq9rrz4dPKBRxYIj1XfAZskTnVUNg69wgMy3eu20OXru94MKcP547+8AK2
+F3NbtVlj9rUmGzseNdRSRn84FOPZHw5+op/Sq63SLLWscMh9PND6Ow6ify42+bj/
+EGm1ClYbTSnEMYxZPWIrqFutF0egiIg6/FejZrIePHNxNDeC78fJgoJJ5KF0gDqG
+JG562u/rypik70/BWEX07Yi77bF1m3zXyAT+IZ18l30BkcZnf1c=
+=DKUX
+-----END PGP SIGNATURE-----
