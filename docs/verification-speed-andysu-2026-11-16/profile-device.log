@@ -1,0 +1,6 @@
+Running as unit: run-p371567-i362216.scope; invocation ID: 1f00d51a55534767a0d0217d2bfb8941
+13:38:54 [36] booting emulator (container)
+13:39:20 [36] booted: SDK 36, page size 4096
+{"sync":0.5999999999985448,"microtask":1.0999999999985448,"paint":27.099999999998545,"settled":36.599999999998545,"selected":"true","profile":[{"function":"","url":"http://tauri.localhost/_app/immutable/chunks/BETzDKye.js","hits":13},{"function":"El","url":"http://tauri.localhost/_app/immutable/chunks/BETzDKye.js","hits":11},{"function":"(program)","url":"","hits":7},{"function":"(idle)","url":"","hits":7},{"function":"kr","url":"http://tauri.localhost/_app/immutable/chunks/BETzDKye.js","hits":2},{"function":"getClientRects","url":"","hits":2},{"function":"ui","url":"http://tauri.localhost/_app/immutable/chunks/Cf9X9g30.js","hits":2},{"function":"queueMicrotask","url":"","hits":1},{"function":"requestAnimationFrame","url":"","hits":1},{"function":"append","url":"","hits":1},{"function":"At","url":"http://tauri.localhost/_app/immutable/chunks/D-Ig9Yjt.js","hits":1},{"function":"","url":"http://tauri.localhost/_app/immutable/chunks/Cf9X9g30.js","hits":1}]}
+
+PROFILE_CLEANUP done

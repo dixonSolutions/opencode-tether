@@ -1,0 +1,13 @@
+opencode-tether
+v0.3.0
+Android app
+Check
+Android updates are manual
+
+Android installs are side-loaded, so the app cannot update itself silently. Download the new APK from GitHub Releases and install it over this app; your saved hosts and settings are kept.
+
+Open releases
+GitHub
+Main-branch releases · github.com/dixonSolutions/opencode-tether/releases
+--- controls
+["button:Check","button:Open releases","button:GitHub"]

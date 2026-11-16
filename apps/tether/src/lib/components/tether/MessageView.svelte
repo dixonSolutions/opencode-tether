@@ -24,9 +24,6 @@
       .map((part) => part.text)
       .join('\n\n')
   );
-  const lastTextID = $derived(
-    [...message.parts].reverse().find((part) => part.type === 'text' && !(part as TextPart).ignored)?.id ?? null
-  );
   const files = $derived(message.parts.filter((part): part is FilePart => part.type === 'file'));
   const time = $derived(new Date(info.time.created).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
   const modelName = $derived(info.modelID?.split('/').pop() ?? info.modelID ?? '');
@@ -94,7 +91,7 @@
     <div class="w-full min-w-0 space-y-3 pl-[34px]">
       {#each message.parts as part (part.id)}
         {#if !(part.type === 'text' && (part as TextPart).ignored)}
-          <PartView {part} streaming={streaming && part.id === lastTextID} />
+          <PartView {part} streaming={streaming} />
         {/if}
       {/each}
       {#if message.parts.length === 0 && streaming}

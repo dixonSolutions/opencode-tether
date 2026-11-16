@@ -1,3 +1,4 @@
+import { updateTranscript, reconcileTranscript } from './transcript';
 import { ApiError, OpencodeClient, normalizeBaseUrl } from '$lib/api/client';
 import type {
   Agent,
@@ -6,7 +7,6 @@ import type {
   DiffFile,
   FileNode,
   HostInfo,
-  MessageInfo,
   MessageWithParts,
   Model,
   Part,
@@ -18,8 +18,8 @@ import type {
   RemoteHealth,
   Session,
   SessionStatus,
-  SnapshotFileDiff,
-  Todo
+  Todo,
+  TetherEvent
 } from '$lib/api/types';
 import { initPlatformClasses, notify, isTauri } from '$lib/platform';
 import { persistentStore } from '$lib/storage.svelte';
@@ -31,26 +31,24 @@ export type Phase = 'boot' | 'needs-remote' | 'host-login' | 'connecting' | 'rea
 export type EventState = 'off' | 'connecting' | 'live' | 'reconnecting';
 
 /** How often an open event stream is checked for silence. */
-const STALL_CHECK_MS = 15_000;
+const STALL_CHECK_MS = 5_000;
 /** Silence after which the host is probed. */
 const STALL_AFTER_MS = 30_000;
 /** Silence after which the stream is dropped even if the host still answers. */
-const DEAD_AFTER_MS = 120_000;
+const DEAD_AFTER_MS = 45_000;
 
 const SESSION_POLL_MS = 20_000;
 
 function sleep(ms: number, signal?: AbortSignal): Promise<void> {
   return new Promise((resolve) => {
     if (signal?.aborted) return resolve();
-    const timer = setTimeout(resolve, ms);
-    signal?.addEventListener(
-      'abort',
-      () => {
-        clearTimeout(timer);
-        resolve();
-      },
-      { once: true }
-    );
+    const done = () => {
+      signal?.removeEventListener('abort', done);
+      clearTimeout(timer);
+      resolve();
+    };
+    const timer = setTimeout(done, ms);
+    signal?.addEventListener('abort', done, { once: true });
   });
 }
 
@@ -114,6 +112,7 @@ export class AppState {
   messagesLoading = $state(false);
   sending = $state(false);
   loadingOlder = $state(false);
+  hasOlderMessages = $state(false);
   lastError = $state<string | null>(null);
   search = $state('');
   drafts = $state<Record<string, string>>({});
@@ -137,10 +136,24 @@ export class AppState {
   client: OpencodeClient | null = null;
   private abortEvents: AbortController | null = null;
   private eventGeneration = 0;
+  private legacyEvents = false;
   private messageRequestId = 0;
+  private nextMessageCursor: string | null = null;
   private healthTimer: ReturnType<typeof setInterval> | null = null;
   private reconnectAttempt = 0;
-  private lastRefresh = 0;
+  private initialRequestId = 0;
+  private initialEvents: TetherEvent[] | null = null;
+  private pendingTranscript: TetherEvent[] = [];
+  private transcriptTimer: ReturnType<typeof setTimeout> | null = null;
+  private streamAttempt: AbortController | null = null;
+  private lastEventActivity = 0;
+  private syncInFlight: Promise<void> | null = null;
+  private resolvedRequests = new Set<string>();
+  private knownQuestionDirectories = new Set<string>();
+  private defaultDirectory: string | null = null;
+  private sessionSelectionId = 0;
+  private requestDirectories = new Map<string, string>();
+  private sessionLookups = new Map<string, Promise<void>>();
   private refreshTimer: ReturnType<typeof setTimeout> | null = null;
 
   get selectedSession(): Session | undefined {
@@ -501,14 +514,19 @@ export class AppState {
       token: remote.token
     });
     this.client = client;
+    this.resetRequests();
+    this.legacyEvents = false;
+    this.providers = null;
+    this.providersLoading = false;
     try {
       const started = performance.now();
       const health = await client.health();
+      if (this.client !== client) return;
       this.connection = { state: 'idle', version: health.version, latencyMs: Math.round(performance.now() - started), checkedAt: Date.now() };
       settings.touchRemote(remote.id);
       await this.afterConnect();
     } catch (error) {
-      this.handleConnectError(error, remote);
+      if (this.client === client) this.handleConnectError(error, remote);
     }
   }
 
@@ -519,6 +537,8 @@ export class AppState {
     this.stopEvents();
     const basic = new OpencodeClient(window.location.origin, { username, password });
     this.client = basic;
+    this.resetRequests();
+    this.legacyEvents = false;
     try {
       if (username) {
         // Verify once, then rely on the signed HttpOnly cookie. This keeps Argon2 off
@@ -552,6 +572,10 @@ export class AppState {
   }
 
   private async afterConnect(): Promise<void> {
+    const client = this.client;
+    if (!client) return;
+    this.selectedDirectory = settings.lastDirectory[this.directoryKey()] ?? null;
+    this.selectedAgent = settings.lastAgent || 'build';
     this.phase = 'ready';
     this.eventState = 'connecting';
     this.reconnectAttempt = 0;
@@ -559,13 +583,25 @@ export class AppState {
     this.startHealthPolling();
     await this.refreshInitial();
     void this.pollHealth();
+    if (client !== this.client) return;
     const key = this.activeRemote ? `lastSession:${this.activeRemote.id}` : 'hostLastSession';
     const savedSession = persistentStore.get<string | null>(key, null);
     const deepLink = new URLSearchParams(window.location.search).get('session');
-    const target =
-      this.sessions.find((session) => session.id === deepLink) ??
-      this.sessions.find((session) => session.id === savedSession) ??
-      this.sessions[0];
+    const requested = deepLink ?? savedSession;
+    let target = this.sessions.find((session) => session.id === requested);
+    if (!target && requested) {
+      try {
+        const session = await client.get<Session>(`/session/${encodeURIComponent(requested)}`, 15_000);
+        if (client !== this.client) return;
+        if (session.id === requested) {
+          this.upsertSession(session);
+          target = session;
+        }
+      } catch {
+        if (client !== this.client) return;
+      }
+    }
+    if (!target && !deepLink) target = this.sessions[0];
     if (target) await this.openSession(target.id, { replace: true });
   }
 
@@ -607,33 +643,132 @@ export class AppState {
     await this.connect(remote);
   }
 
+  private directoryPath(path: string, sessionID = this.selectedSessionId): string {
+    const directory = this.sessions.find((session) => session.id === sessionID)?.directory ?? this.selectedDirectory ?? this.defaultDirectory;
+    return directory ? `${path}${path.includes('?') ? '&' : '?'}directory=${encodeURIComponent(directory)}` : path;
+  }
+
+  private resetRequests(): void {
+    this.permissions = [];
+    this.questions = [];
+    this.knownQuestionDirectories.clear();
+    this.defaultDirectory = null;
+    this.requestDirectories.clear();
+    this.resolvedRequests.clear();
+    this.sessionLookups.clear();
+  }
+
+  private resolveQuestion(requestID: string): void {
+    this.resolvedRequests.add(requestID);
+    this.questions = this.questions.filter((item) => item.id !== requestID);
+  }
+
+  private requestDirectory(sessionID = this.selectedSessionId): string | null {
+    return this.sessions.find((session) => session.id === sessionID)?.directory ?? this.selectedDirectory ?? this.defaultDirectory;
+  }
+
+  private requestPath(path: string, directory: string | null): string {
+    return directory ? `${path}?directory=${encodeURIComponent(directory)}` : path;
+  }
+
+  private mergeScopedRequests<T extends { id: string; sessionID: string }>(current: T[], incoming: T[], directory: string | null, baseline: T[]): T[] {
+    // Scope belongs to the HTTP request, not the (possibly changed/capped) session list.
+    const inScope = (request: T) => {
+      const known = this.requestDirectories.get(request.id) ?? this.sessions.find((session) => session.id === request.sessionID)?.directory;
+      return !!directory && sameDirectory(known, directory);
+    };
+    const merged = new Map(current.filter((request) => !inScope(request)).map((request) => [request.id, request]));
+    for (const request of incoming) {
+      if (this.resolvedRequests.has(request.id)) continue;
+      merged.set(request.id, request);
+      if (directory) this.requestDirectories.set(request.id, directory);
+    }
+    const before = new Map(baseline.map((request) => [request.id, request]));
+    const live = new Set(current.map((request) => request.id));
+    for (const request of current) if (request !== before.get(request.id)) merged.set(request.id, request);
+    for (const id of before.keys()) if (!live.has(id)) merged.delete(id);
+    return [...merged.values()];
+  }
+
+  private async ensureSession(sessionID: string): Promise<void> {
+    if (this.sessions.some((session) => session.id === sessionID)) return;
+    const existing = this.sessionLookups.get(sessionID);
+    if (existing) return existing;
+    const client = this.client;
+    if (!client) return;
+    const lookup = (async () => {
+      try {
+        const session = await client.get<Session>(`/session/${encodeURIComponent(sessionID)}`, 15_000);
+        if (client === this.client && session.id === sessionID) this.upsertSession(session);
+      } catch {
+        // Keep the request even if session metadata is temporarily unavailable.
+      }
+    })();
+    this.sessionLookups.set(sessionID, lookup);
+    try { await lookup; } finally { if (this.sessionLookups.get(sessionID) === lookup) this.sessionLookups.delete(sessionID); }
+  }
+
+  private mergeSessions(incoming: Session[]): void {
+    for (const session of [...this.sessions, ...incoming]) if (session.directory) this.knownQuestionDirectories.add(session.directory);
+    const retained = new Set([this.selectedSessionId, ...this.permissions.map((request) => request.sessionID), ...this.questions.map((request) => request.sessionID)]);
+    this.sessions = [...new Map([...this.sessions.filter((session) => retained.has(session.id)), ...incoming].map((session) => [session.id, session])).values()]
+      .sort((a, b) => sessionUpdated(b) - sessionUpdated(a));
+  }
+
+  private mergeScopedStatuses(incoming: Record<string, SessionStatus>, sessionID = this.selectedSessionId, baseline = this.statuses): Record<string, SessionStatus> {
+    const directory = this.sessions.find((session) => session.id === sessionID)?.directory;
+    if (!directory) return { ...incoming };
+    const scope = new Set(this.sessions.filter((session) => session.directory === directory).map((session) => session.id));
+    const merged = { ...Object.fromEntries(Object.entries(this.statuses).filter(([id]) => !scope.has(id))), ...incoming };
+    for (const [id, status] of Object.entries(this.statuses)) if (status !== baseline[id]) merged[id] = status;
+    return merged;
+  }
+
   async refreshInitial(): Promise<void> {
     if (!this.client) return;
+    const client = this.client;
+    const sessionID = this.selectedSessionId;
+    const directory = this.requestDirectory();
+    const permissionBaseline = this.permissions;
+    const questionBaseline = this.questions;
+    const requestId = ++this.initialRequestId;
+    const events: TetherEvent[] = [];
+    this.initialEvents = events;
     this.sessionsLoading = true;
     const results = await Promise.allSettled([
       this.client.get<Session[]>('/session', 20_000),
-      this.client.get<Agent[]>('/agent', 15_000),
-      this.client.get<Command[]>('/command', 15_000),
-      this.client.get<Config>('/config', 15_000),
-      this.client.get<Record<string, SessionStatus>>('/session/status', 15_000),
+      this.client.get<Agent[]>(this.directoryPath('/agent'), 15_000),
+      this.client.get<Command[]>(this.directoryPath('/command'), 15_000),
+      this.client.get<Config>(this.directoryPath('/config'), 15_000),
+      this.client.get<Record<string, SessionStatus>>(this.directoryPath('/session/status'), 15_000),
       // Requests already waiting when the app connects are not replayed as events, so load them here.
-      this.client.get<PermissionRequest[]>('/permission', 15_000),
-      this.client.get<QuestionRequest[]>('/question', 15_000)
+      this.client.get<PermissionRequest[]>(this.requestPath('/permission', directory), 15_000),
+      this.client.get<QuestionRequest[]>(this.requestPath('/question', directory), 15_000),
+      this.client.get<{ directory?: string }>('/path', 10_000)
     ]);
-    const [sessions, agents, commands, config, statuses, permissions, questions] = results;
-    if (sessions.status === 'fulfilled') this.sessions = [...sessions.value].sort((a, b) => sessionUpdated(b) - sessionUpdated(a));
+    if (this.client !== client || requestId !== this.initialRequestId) return;
+    this.initialEvents = null;
+    const [sessions, agents, commands, config, statuses, permissions, questions, path] = results;
+    if (path.status === 'fulfilled') this.defaultDirectory = path.value.directory ?? null;
+    const requestDirectory = directory ?? this.defaultDirectory;
+    if (sessions.status === 'fulfilled') this.mergeSessions(sessions.value);
     if (agents.status === 'fulfilled') this.agents = agents.value;
     if (commands.status === 'fulfilled') this.commands = commands.value.filter((command) => command.name);
     if (config.status === 'fulfilled') this.config = config.value;
-    if (statuses.status === 'fulfilled') this.statuses = { ...statuses.value };
-    if (permissions.status === 'fulfilled') this.permissions = permissions.value;
-    if (questions.status === 'fulfilled') this.questions = questions.value;
+    if (statuses.status === 'fulfilled') this.statuses = this.mergeScopedStatuses(statuses.value, sessionID);
+    if (permissions.status === 'fulfilled') this.permissions = this.mergeScopedRequests(this.permissions, permissions.value, requestDirectory, permissionBaseline);
+    if (questions.status === 'fulfilled') this.questions = this.mergeScopedRequests(this.questions, questions.value, requestDirectory, questionBaseline);
 
     const configModel = parseModel(typeof this.config?.model === 'string' ? this.config.model : undefined);
-    this.selectedModel = settings.lastModel ?? configModel ?? null;
-    this.selectedAgent = this.selectedAgent || settings.lastAgent || 'build';
+    this.selectedModel ??= settings.lastModel ?? configModel ?? null;
+    if (!this.visibleAgents.some((agent) => agent.name === this.selectedAgent)) {
+      this.selectedAgent = this.visibleAgents.find((agent) => agent.name === settings.lastAgent)?.name ?? this.visibleAgents[0]?.name ?? 'build';
+    }
     this.selectedDirectory = settings.lastDirectory[this.directoryKey()] ?? null;
 
+    for (const event of events) this.applyEvent(event, true);
+    await Promise.all([...new Set([...this.permissions, ...this.questions].map((request) => request.sessionID))].map((id) => this.ensureSession(id)));
+    await this.refreshQuestions();
     this.sessionsLoading = false;
     if (sessions.status === 'rejected') {
       const reason = sessions.reason;
@@ -646,16 +781,30 @@ export class AppState {
 
   async refreshSessions(): Promise<void> {
     if (!this.client) return;
+    const client = this.client;
     try {
-      const sessions = await this.client.get<Session[]>('/session', 20_000);
-      this.sessions = [...sessions].sort((a, b) => sessionUpdated(b) - sessionUpdated(a));
+      const sessions = await client.get<Session[]>('/session', 20_000);
+      if (client === this.client) this.mergeSessions(sessions);
     } catch (error) {
+      if (client !== this.client) return;
       if (error instanceof ApiError && error.status === 401) this.phase = 'unauthorized';
     }
   }
 
   async openSession(sessionID: string, options: { replace?: boolean } = {}): Promise<void> {
     if (!this.client) return;
+    const client = this.client;
+    const selection = ++this.sessionSelectionId;
+    await this.ensureSession(sessionID);
+    if (client !== this.client || selection !== this.sessionSelectionId) return;
+    const previousDirectory = this.selectedSession?.directory;
+    this.flushTranscript();
+    if (this.selectedSessionId !== sessionID) {
+      this.messages = [];
+      this.hasOlderMessages = false;
+      this.nextMessageCursor = null;
+      this.loadingOlder = false;
+    }
     this.selectedSessionId = sessionID;
     if (!options.replace) {
       const url = new URL(window.location.href);
@@ -667,30 +816,91 @@ export class AppState {
 
     const session = this.sessions.find((item) => item.id === sessionID);
     if (session?.agent) this.selectedAgent = session.agent;
-    await Promise.all([this.refreshMessages(sessionID), this.refreshTodos(sessionID), this.refreshDiffs(sessionID)]);
+    if (this.legacyEvents && previousDirectory !== session?.directory) {
+      this.startEvents();
+      this.startHealthPolling();
+    }
+    await Promise.all([
+      this.refreshMessages(sessionID), this.refreshTodos(sessionID), this.refreshDiffs(sessionID),
+      this.refreshPermissions(), this.refreshQuestions(),
+      previousDirectory !== session?.directory ? this.refreshSessionContext(sessionID) : Promise.resolve()
+    ]);
+  }
+
+  private async refreshSessionContext(sessionID: string): Promise<void> {
+    const client = this.client;
+    if (!client) return;
+    this.providers = null;
+    this.providersLoading = false;
+    const [agents, commands, config] = await Promise.allSettled([
+      client.get<Agent[]>(this.directoryPath('/agent', sessionID), 15_000),
+      client.get<Command[]>(this.directoryPath('/command', sessionID), 15_000),
+      client.get<Config>(this.directoryPath('/config', sessionID), 15_000)
+    ]);
+    if (client !== this.client || sessionID !== this.selectedSessionId) return;
+    if (agents.status === 'fulfilled') {
+      this.agents = agents.value;
+      if (!this.visibleAgents.some((agent) => agent.name === this.selectedAgent)) this.selectedAgent = this.visibleAgents[0]?.name ?? 'build';
+    }
+    if (commands.status === 'fulfilled') this.commands = commands.value.filter((command) => command.name);
+    if (config.status === 'fulfilled') this.config = config.value;
   }
 
   async refreshMessages(sessionID = this.selectedSessionId): Promise<void> {
     if (!this.client || !sessionID) return;
+    this.flushTranscript();
+    const client = this.client;
+    const baseline = this.messages;
+    const limit = Math.max(60, baseline.length);
     const gen = ++this.messageRequestId;
     this.messagesLoading = true;
     try {
-      const messages = await this.client.get<MessageWithParts[]>(`/session/${sessionID}/message`, 30_000);
-      if (gen === this.messageRequestId && sessionID === this.selectedSessionId) {
-        this.messages = [...messages].sort((a, b) => (a.info.time?.created ?? 0) - (b.info.time?.created ?? 0));
+      const page = await client.getPage<MessageWithParts[]>(this.directoryPath(`/session/${sessionID}/message?limit=${limit}`, sessionID), 30_000);
+      const messages = page.data;
+      if (gen === this.messageRequestId && sessionID === this.selectedSessionId && client === this.client) {
+        this.flushTranscript();
+        this.messages = reconcileTranscript(messages, baseline, this.messages);
+        this.nextMessageCursor = page.nextCursor;
+        this.hasOlderMessages = !!page.nextCursor || messages.length === limit;
       }
     } catch (error) {
+      if (client !== this.client) return;
       if (error instanceof ApiError && error.status === 401) this.phase = 'unauthorized';
     } finally {
       if (gen === this.messageRequestId) this.messagesLoading = false;
     }
   }
 
+  async loadEarlierMessages(): Promise<void> {
+    const client = this.client;
+    const sessionID = this.selectedSessionId;
+    const before = this.nextMessageCursor;
+    if (!client || !sessionID || !this.hasOlderMessages || this.loadingOlder) return;
+    const gen = this.messageRequestId;
+    this.loadingOlder = true;
+    try {
+      const query = before ? `limit=60&before=${encodeURIComponent(before)}` : 'limit=0';
+      const page = await client.getPage<MessageWithParts[]>(this.directoryPath(`/session/${sessionID}/message?${query}`, sessionID), 30_000);
+      if (client !== this.client || sessionID !== this.selectedSessionId || gen !== this.messageRequestId) return;
+      this.flushTranscript();
+      const existing = new Set(this.messages.map((message) => message.info.id));
+      const earlier = page.data.filter((message) => !existing.has(message.info.id));
+      this.messages = [...earlier, ...this.messages].sort((a, b) => a.info.time.created - b.info.time.created || a.info.id.localeCompare(b.info.id));
+      this.nextMessageCursor = page.nextCursor;
+      this.hasOlderMessages = !!page.nextCursor && earlier.length > 0;
+    } catch (error) {
+      if (client === this.client) this.showError(error, 'Could not load earlier messages');
+    } finally {
+      if (client === this.client && sessionID === this.selectedSessionId) this.loadingOlder = false;
+    }
+  }
+
   async refreshTodos(sessionID = this.selectedSessionId): Promise<void> {
     if (!this.client || !sessionID) return;
+    const client = this.client;
     try {
-      const todos = await this.client.get<Todo[]>(`/session/${sessionID}/todo`, 10_000);
-      this.todos = { ...this.todos, [sessionID]: todos };
+      const todos = await client.get<Todo[]>(this.directoryPath(`/session/${sessionID}/todo`, sessionID), 10_000);
+      if (client === this.client) this.todos = { ...this.todos, [sessionID]: todos };
     } catch {
       // Todos are optional.
     }
@@ -698,9 +908,10 @@ export class AppState {
 
   async refreshDiffs(sessionID = this.selectedSessionId): Promise<void> {
     if (!this.client || !sessionID) return;
+    const client = this.client;
     try {
-      const diffs = await this.client.get<DiffFile[]>(`/session/${sessionID}/diff`, 15_000);
-      this.diffs = { ...this.diffs, [sessionID]: diffs };
+      const diffs = await client.get<DiffFile[]>(this.directoryPath(`/session/${sessionID}/diff`, sessionID), 15_000);
+      if (client === this.client) this.diffs = { ...this.diffs, [sessionID]: diffs };
     } catch {
       // Diffs are optional until the agent changes files.
     }
@@ -731,7 +942,7 @@ export class AppState {
   async renameSession(sessionID: string, title: string): Promise<void> {
     if (!this.client) return;
     try {
-      const updated = await this.client.patch<Session>(`/session/${sessionID}`, { title });
+      const updated = await this.client.patch<Session>(this.directoryPath(`/session/${sessionID}`, sessionID), { title });
       this.sessions = this.sessions.map((session) => (session.id === sessionID ? { ...session, ...updated } : session));
     } catch (error) {
       this.showError(error, 'Could not rename session');
@@ -741,7 +952,7 @@ export class AppState {
   async deleteSession(sessionID: string): Promise<void> {
     if (!this.client) return;
     try {
-      await this.client.delete(`/session/${sessionID}`);
+      await this.client.delete(this.directoryPath(`/session/${sessionID}`, sessionID));
       this.sessions = this.sessions.filter((session) => session.id !== sessionID);
       this.statuses = Object.fromEntries(Object.entries(this.statuses).filter(([key]) => key !== sessionID));
       if (this.selectedSessionId === sessionID) {
@@ -758,7 +969,7 @@ export class AppState {
   async forkSession(): Promise<void> {
     if (!this.client || !this.selectedSessionId) return;
     try {
-      const session = await this.client.post<Session>(`/session/${this.selectedSessionId}/fork`, undefined, 30_000);
+      const session = await this.client.post<Session>(this.directoryPath(`/session/${this.selectedSessionId}/fork`), undefined, 30_000);
       this.sessions = [session, ...this.sessions];
       await this.openSession(session.id);
       toast.success('Session forked');
@@ -770,7 +981,7 @@ export class AppState {
   async shareSession(): Promise<string | null> {
     if (!this.client || !this.selectedSessionId) return null;
     try {
-      const result = await this.client.post<{ url?: string }>(`/session/${this.selectedSessionId}/share`, undefined, 30_000);
+      const result = await this.client.post<{ url?: string }>(this.directoryPath(`/session/${this.selectedSessionId}/share`), undefined, 30_000);
       const url = result?.url;
       if (url) {
         const ok = await navigator.clipboard.writeText(url).then(() => true).catch(() => false);
@@ -790,7 +1001,7 @@ export class AppState {
     }
     try {
       await this.client.post(
-        `/session/${this.selectedSessionId}/summarize`,
+        this.directoryPath(`/session/${this.selectedSessionId}/summarize`),
         { providerID: this.selectedModel.providerID, modelID: this.selectedModel.modelID },
         120_000
       );
@@ -804,7 +1015,7 @@ export class AppState {
   async deleteMessage(sessionID: string, messageID: string): Promise<void> {
     if (!this.client) return;
     try {
-      await this.client.delete(`/session/${sessionID}/message/${messageID}`);
+      await this.client.delete(this.directoryPath(`/session/${sessionID}/message/${messageID}`, sessionID));
       this.messages = this.messages.filter((message) => message.info.id !== messageID);
     } catch (error) {
       this.showError(error, 'Could not delete message');
@@ -847,13 +1058,13 @@ export class AppState {
       const shellMatch = /^!([\s\S]+)$/.exec(text);
       if (shellMatch) {
         await this.client.post(
-          `/session/${sessionID}/shell`,
+          this.directoryPath(`/session/${sessionID}/shell`, sessionID),
           { agent, command: shellMatch[1], model: model ? { providerID: model.providerID, modelID: model.modelID } : undefined },
           60_000
         );
       } else if (commandMatch && this.commands.some((command) => command.name === commandMatch[1])) {
         await this.client.post(
-          `/session/${sessionID}/command`,
+          this.directoryPath(`/session/${sessionID}/command`, sessionID),
           {
             command: commandMatch[1],
             arguments: commandMatch[2] ?? '',
@@ -869,7 +1080,7 @@ export class AppState {
         for (const file of input.attachments ?? []) parts.push({ type: 'file', ...file });
         const body: PromptBody = { parts, agent };
         if (model) body.model = { providerID: model.providerID, modelID: model.modelID };
-        await this.client.post(`/session/${sessionID}/prompt_async`, body, 60_000);
+        await this.client.post(this.directoryPath(`/session/${sessionID}/prompt_async`, sessionID), body, 60_000);
       }
       this.drafts = { ...this.drafts, [sessionID]: '' };
       this.persistDrafts();
@@ -887,7 +1098,7 @@ export class AppState {
     if (!this.client || !this.selectedSessionId) return;
     this.haptic(12);
     try {
-      await this.client.post(`/session/${this.selectedSessionId}/abort`);
+      await this.client.post(this.directoryPath(`/session/${this.selectedSessionId}/abort`));
     } catch (error) {
       this.showError(error, 'Could not stop the session');
     }
@@ -895,9 +1106,10 @@ export class AppState {
 
   async replyPermission(requestID: string, reply: 'once' | 'always' | 'reject'): Promise<void> {
     if (!this.client) return;
+    const sessionID = this.permissions.find((request) => request.id === requestID)?.sessionID ?? this.selectedSessionId;
     this.permissions = this.permissions.filter((item) => item.id !== requestID);
     try {
-      await this.client.post(`/permission/${requestID}/reply`, { reply });
+      await this.client.post(this.directoryPath(`/permission/${requestID}/reply`, sessionID), { reply });
     } catch (error) {
       this.showError(error, 'Could not answer the permission request');
       await this.refreshPermissions();
@@ -906,9 +1118,11 @@ export class AppState {
 
   async replyQuestion(requestID: string, answers: string[][]): Promise<void> {
     if (!this.client) return;
-    this.questions = this.questions.filter((item) => item.id !== requestID);
+    const sessionID = this.questions.find((request) => request.id === requestID)?.sessionID ?? this.selectedSessionId;
     try {
-      await this.client.post(`/question/${requestID}/reply`, { answers });
+      await this.client.post(this.requestPath(`/question/${requestID}/reply`, this.requestDirectories.get(requestID) ?? this.requestDirectory(sessionID)), { answers });
+      this.resolveQuestion(requestID);
+      await this.resync();
     } catch (error) {
       this.showError(error, 'Could not answer the question');
       await this.refreshQuestions();
@@ -917,9 +1131,11 @@ export class AppState {
 
   async rejectQuestion(requestID: string): Promise<void> {
     if (!this.client) return;
-    this.questions = this.questions.filter((item) => item.id !== requestID);
+    const sessionID = this.questions.find((request) => request.id === requestID)?.sessionID ?? this.selectedSessionId;
     try {
-      await this.client.post(`/question/${requestID}/reject`);
+      await this.client.post(this.requestPath(`/question/${requestID}/reject`, this.requestDirectories.get(requestID) ?? this.requestDirectory(sessionID)));
+      this.resolveQuestion(requestID);
+      await this.resync();
     } catch (error) {
       this.showError(error, 'Could not dismiss the question');
       await this.refreshQuestions();
@@ -928,32 +1144,58 @@ export class AppState {
 
   async refreshPermissions(): Promise<void> {
     if (!this.client) return;
+    const client = this.client;
+    const directory = this.requestDirectory();
+    const baseline = this.permissions;
     try {
-      this.permissions = await this.client.get<PermissionRequest[]>('/permission', 10_000);
+      const values = await client.get<PermissionRequest[]>(this.requestPath('/permission', directory), 10_000);
+      if (client === this.client) this.permissions = this.mergeScopedRequests(this.permissions, values, directory, baseline);
+      if (client === this.client) await Promise.all(values.map((request) => this.ensureSession(request.sessionID)));
     } catch {
       // ignore
     }
   }
 
   async refreshQuestions(): Promise<void> {
-    if (!this.client) return;
+    // Question lists are per opencode directory instance. Reconcile background
+    // sessions too: their question.asked event may have occurred during an outage.
+    const directories = new Set([
+      this.requestDirectory(), this.defaultDirectory, ...this.recentDirectories, ...this.knownQuestionDirectories,
+      ...this.sessions.map((session) => session.directory), ...this.requestDirectories.values()
+    ].filter((directory): directory is string => !!directory).map(trimTrailingSlash));
+    const scopes: Array<string | null> = directories.size ? [...directories] : [null];
+    // Bound fan-out for hosts with many project directories.
+    for (let index = 0; index < scopes.length; index += 4) {
+      await Promise.all(scopes.slice(index, index + 4).map((directory) => this.refreshQuestionDirectory(directory)));
+    }
+  }
+
+  private async refreshQuestionDirectory(directory: string | null): Promise<void> {
+    const client = this.client;
+    if (!client) return;
+    const baseline = this.questions;
     try {
-      this.questions = await this.client.get<QuestionRequest[]>('/question', 10_000);
+      const values = await client.get<QuestionRequest[]>(this.requestPath('/question', directory), 10_000);
+      if (client === this.client) {
+        this.questions = this.mergeScopedRequests(this.questions, values, directory, baseline);
+        await Promise.all(values.map((request) => this.ensureSession(request.sessionID)));
+      }
     } catch {
-      // ignore
+      // Retain requests on transient failure; the next poll/reconnect retries.
     }
   }
 
   async loadProviders(): Promise<void> {
     if (!this.client || this.providers || this.providersLoading) return;
+    const client = this.client;
     this.providersLoading = true;
     try {
-      const response = await this.client.get<{ all: Provider[] }>('/provider', 45_000);
-      this.providers = response.all ?? [];
+      const response = await client.get<{ all: Provider[] }>(this.directoryPath('/provider'), 45_000);
+      if (client === this.client) this.providers = response.all ?? [];
     } catch (error) {
-      this.showError(error, 'Could not load models');
+      if (client === this.client) this.showError(error, 'Could not load models');
     } finally {
-      this.providersLoading = false;
+      if (client === this.client) this.providersLoading = false;
     }
   }
 
@@ -1001,32 +1243,55 @@ export class AppState {
   }
 
   private scheduleMessageRefresh(): void {
-    if (this.refreshTimer) clearTimeout(this.refreshTimer);
-    this.refreshTimer = setTimeout(() => void this.refreshMessages(), 450);
+    if (this.refreshTimer) return;
+    const sessionID = this.selectedSessionId;
+    this.refreshTimer = setTimeout(() => {
+      this.refreshTimer = null;
+      if (sessionID === this.selectedSessionId) void this.refreshMessages(sessionID);
+    }, 450);
   }
 
   private startHealthPolling(): void {
     if (this.healthTimer) clearInterval(this.healthTimer);
     this.healthTimer = setInterval(() => void this.pollHealth(), SESSION_POLL_MS);
     document.addEventListener('visibilitychange', this.onVisibility);
+    window.addEventListener('online', this.onOnline);
+    window.addEventListener('pageshow', this.onVisibility);
   }
 
   private onVisibility = (): void => {
-    if (document.visibilityState === 'visible') void this.pollHealth();
+    if (document.visibilityState !== 'visible') return;
+    if (Date.now() - this.lastEventActivity > STALL_AFTER_MS) this.streamAttempt?.abort();
+    void this.pollHealth();
+  };
+
+  private onOnline = (): void => {
+    if (settings.autoReconnect && this.phase === 'ready') {
+      this.startEvents();
+      this.startHealthPolling();
+      void this.resync();
+    }
   };
 
   async pollHealth(): Promise<void> {
     if (!this.client || this.phase !== 'ready') return;
+    const client = this.client;
+    const sessionID = this.selectedSessionId;
     const start = performance.now();
     try {
-      const health = await this.client.health();
+      const health = await client.health();
+      if (client !== this.client) return;
       const latency = Math.round(performance.now() - start);
       try {
-        const statuses = await this.client.get<Record<string, SessionStatus>>('/session/status', 8000);
-        this.statuses = { ...statuses };
+        const baseline = this.statuses;
+        const statuses = await client.get<Record<string, SessionStatus>>(this.directoryPath('/session/status'), 8000);
+        if (client === this.client) this.statuses = this.mergeScopedStatuses(statuses, sessionID, baseline);
       } catch {
         // status is optional
       }
+      if (client !== this.client) return;
+      await Promise.all([this.refreshPermissions(), this.refreshQuestions()]);
+      if (client !== this.client) return;
       const busy = Object.values(this.statuses).filter((status) => status.type !== 'idle').length;
       this.connection = {
         state: busy > 0 ? 'online' : 'idle',
@@ -1035,8 +1300,8 @@ export class AppState {
         busySessions: busy,
         checkedAt: Date.now()
       };
-      if (this.eventState === 'reconnecting') this.eventState = 'live';
     } catch (error) {
+      if (client !== this.client) return;
       if (error instanceof ApiError && error.status === 401) {
         this.phase = 'unauthorized';
         this.connection = { state: 'unauthorized', checkedAt: Date.now() };
@@ -1058,11 +1323,20 @@ export class AppState {
     this.eventGeneration++;
     this.abortEvents?.abort();
     this.abortEvents = null;
+    this.streamAttempt = null;
+    this.flushTranscript();
+    this.messageRequestId++;
+    this.initialRequestId++;
+    this.initialEvents = null;
+    if (this.refreshTimer) clearTimeout(this.refreshTimer);
+    this.refreshTimer = null;
     this.eventState = 'off';
     if (this.healthTimer) {
       clearInterval(this.healthTimer);
       this.healthTimer = null;
       document.removeEventListener('visibilitychange', this.onVisibility);
+      window.removeEventListener('online', this.onOnline);
+      window.removeEventListener('pageshow', this.onVisibility);
     }
   }
 
@@ -1076,17 +1350,21 @@ export class AppState {
     while (gen === this.eventGeneration && !signal.aborted && this.client) {
       this.eventState = this.reconnectAttempt === 0 ? 'connecting' : 'reconnecting';
       const attempt = new AbortController();
+      this.streamAttempt = attempt;
       const cancelAttempt = () => attempt.abort();
       signal.addEventListener('abort', cancelAttempt, { once: true });
       let lastFrame = Date.now();
+      this.lastEventActivity = lastFrame;
       const watchdog = setInterval(() => void this.checkStalled(attempt, () => lastFrame), STALL_CHECK_MS);
       try {
-        for await (const event of this.client.stream('/event', attempt.signal)) {
+        const directory = this.selectedSession?.directory;
+        const path = this.legacyEvents ? `/event${directory ? `?directory=${encodeURIComponent(directory)}` : ''}` : '/global/event';
+        for await (const event of this.client.stream(path, attempt.signal, () => { lastFrame = Date.now(); this.lastEventActivity = lastFrame; })) {
           if (gen !== this.eventGeneration) return;
           lastFrame = Date.now();
           if (this.reconnectAttempt > 0) {
             // Events emitted while the stream was down are gone; reload what they would have changed.
-            void this.refreshAll();
+            void this.resync();
           }
           this.eventState = 'live';
           this.reconnectAttempt = 0;
@@ -1095,6 +1373,10 @@ export class AppState {
         }
       } catch (error) {
         if (signal.aborted || gen !== this.eventGeneration) return;
+        if (error instanceof ApiError && error.status === 404 && !this.legacyEvents) {
+          this.legacyEvents = true;
+          continue;
+        }
         if (error instanceof ApiError && error.status === 401) {
           this.phase = 'unauthorized';
           this.connection = { state: 'unauthorized' };
@@ -1103,6 +1385,8 @@ export class AppState {
         this.eventState = 'reconnecting';
       } finally {
         clearInterval(watchdog);
+        this.flushTranscript();
+        if (this.streamAttempt === attempt) this.streamAttempt = null;
         signal.removeEventListener('abort', cancelAttempt);
       }
       if (signal.aborted || gen !== this.eventGeneration) return;
@@ -1110,8 +1394,9 @@ export class AppState {
         this.eventState = 'off';
         return;
       }
+      this.eventState = 'reconnecting';
       this.reconnectAttempt++;
-      await sleep(backoff, signal);
+      await sleep(backoff * (0.8 + Math.random() * 0.4), signal);
       backoff = Math.min(backoff * 1.8, 20_000);
     }
   }
@@ -1136,37 +1421,26 @@ export class AppState {
     }
   }
 
-  private applyEvent(raw: { type: string; properties?: Record<string, unknown>; payload?: unknown }): void {
+  private applyEvent(raw: { type: string; properties?: Record<string, unknown>; payload?: unknown; directory?: string }, replay = false): void {
     const event = (raw.payload && typeof raw.payload === 'object' && 'type' in raw.payload
       ? (raw.payload as { type: string; properties: Record<string, unknown> })
       : raw) as { type: string; properties: Record<string, unknown> };
     const props = event.properties ?? {};
+    if (!replay && this.initialEvents && /^(session\.(created|updated|deleted|status)|permission\.|question\.|todo\.updated|session\.diff)/.test(event.type)) {
+      this.initialEvents.push(raw as TetherEvent);
+    }
     switch (event.type) {
       case 'server.connected':
         this.eventState = 'live';
         return;
-      case 'message.updated': {
-        const info = props.info as MessageInfo | undefined;
-        if (info) this.upsertMessage(info);
+      case 'message.updated':
+      case 'message.part.updated':
+      case 'message.part.delta':
+      case 'message.part.removed':
+      case 'message.removed':
+        this.pendingTranscript.push(event);
+        if (!this.transcriptTimer) this.transcriptTimer = setTimeout(() => this.flushTranscript(), 16);
         return;
-      }
-      case 'message.part.updated': {
-        const part = props.part as Part | undefined;
-        if (part) this.upsertPart(part);
-        return;
-      }
-      case 'message.part.removed': {
-        const messageID = props.messageID as string;
-        const partID = props.partID as string;
-        this.messages = this.messages.map((message) =>
-          message.info.id === messageID ? { ...message, parts: message.parts.filter((part) => part.id !== partID) } : message
-        );
-        return;
-      }
-      case 'message.removed': {
-        this.messages = this.messages.filter((message) => message.info.id !== (props.messageID as string));
-        return;
-      }
       case 'session.created':
       case 'session.updated': {
         const info = props.info as Session | undefined;
@@ -1203,23 +1477,29 @@ export class AppState {
       case 'permission.asked':
         if (props.id) {
           const request = props as unknown as PermissionRequest;
+          if (raw.directory) this.requestDirectories.set(request.id, raw.directory);
+          void this.ensureSession(request.sessionID);
           this.permissions = [request, ...this.permissions.filter((item) => item.id !== request.id)];
-          if (settings.notifications && document.visibilityState === 'hidden') notify('Permission needed', `${request.permission} · ${request.patterns?.join(', ') ?? ''}`);
+          if (!replay && settings.notifications && document.visibilityState === 'hidden') notify('Permission needed', `${request.permission} · ${request.patterns?.join(', ') ?? ''}`);
         }
         return;
       case 'permission.replied':
-        this.permissions = this.permissions.filter((item) => item.id !== (props.id as string));
+        this.permissions = this.permissions.filter((item) => item.id !== ((props.requestID ?? props.id) as string));
         return;
       case 'question.asked':
         if (props.id) {
           const request = props as unknown as QuestionRequest;
+          // Request IDs are unique; legacy streams can replay an already resolved ask.
+          if (this.resolvedRequests.has(request.id)) return;
+          if (raw.directory) this.requestDirectories.set(request.id, raw.directory);
+          void this.ensureSession(request.sessionID);
           this.questions = [request, ...this.questions.filter((item) => item.id !== request.id)];
-          if (settings.notifications && document.visibilityState === 'hidden') notify('opencode has a question', request.questions?.[0]?.question ?? '');
+          if (!replay && settings.notifications && document.visibilityState === 'hidden') notify('opencode has a question', request.questions?.[0]?.question ?? '');
         }
         return;
       case 'question.replied':
       case 'question.rejected':
-        this.questions = this.questions.filter((item) => item.id !== (props.id as string));
+        this.resolveQuestion((props.requestID ?? props.id) as string);
         return;
       case 'todo.updated': {
         const id = props.sessionID as string;
@@ -1250,39 +1530,40 @@ export class AppState {
   }
 
   private upsertSession(info: Session): void {
+    if (info.directory) this.knownQuestionDirectories.add(info.directory);
     const index = this.sessions.findIndex((session) => session.id === info.id);
     const next = index === -1 ? [info, ...this.sessions] : this.sessions.map((session, i) => (i === index ? { ...session, ...info } : session));
     this.sessions = next.sort((a, b) => sessionUpdated(b) - sessionUpdated(a));
   }
 
-  private upsertMessage(info: MessageInfo): void {
-    if (this.selectedSessionId && info.sessionID !== this.selectedSessionId) return;
-    const index = this.messages.findIndex((message) => message.info.id === info.id);
-    if (index === -1) {
-      this.messages = [...this.messages, { info, parts: [] }].sort((a, b) => (a.info.time?.created ?? 0) - (b.info.time?.created ?? 0));
-    } else {
-      this.messages = this.messages.map((message, i) => (i === index ? { ...message, info: { ...message.info, ...info } } : message));
+  private flushTranscript(): void {
+    if (this.transcriptTimer) clearTimeout(this.transcriptTimer);
+    this.transcriptTimer = null;
+    const events = this.pendingTranscript;
+    this.pendingTranscript = [];
+    const previous = this.messages;
+    this.messages = updateTranscript(previous, events, this.selectedSessionId);
+    if (settings.notifications && document.visibilityState === 'hidden' && this.messages !== previous) {
+      const completed = new Set(previous.filter((message) => message.info.time.completed).map((message) => message.info.id));
+      if (this.messages.some((message) => message.info.role === 'assistant' && message.info.time.completed && !completed.has(message.info.id))) {
+        notify('opencode finished', this.selectedSession?.title ?? 'Response ready');
+      }
     }
-    if (settings.notifications && info.role === 'assistant' && info.time?.completed && document.visibilityState === 'hidden') {
-      notify('opencode finished', this.selectedSession?.title ?? 'Response ready');
-    }
+    if (events.some((event) => {
+      const props = event.properties ?? {};
+      const part = props.part as Part | undefined;
+      if ((props.sessionID ?? part?.sessionID) !== this.selectedSessionId) return false;
+      if (event.type !== 'message.part.updated' && event.type !== 'message.part.delta') return false;
+      const message = this.messages.find((message) => message.info.id === (props.messageID ?? part?.messageID));
+      return !message || (event.type === 'message.part.delta' && !message.parts.some((part) => part.id === props.partID));
+    })) this.scheduleMessageRefresh();
   }
 
-  private upsertPart(part: Part): void {
-    if (this.selectedSessionId && part.sessionID !== this.selectedSessionId) return;
-    let found = false;
-    const next = this.messages.map((message) => {
-      if (message.info.id !== part.messageID) return message;
-      found = true;
-      const index = message.parts.findIndex((item) => item.id === part.id);
-      const parts = index === -1 ? [...message.parts, part] : message.parts.map((item, i) => (i === index ? part : item));
-      return { ...message, parts };
-    });
-    if (found) {
-      this.messages = next;
-    } else if (part.sessionID === this.selectedSessionId) {
-      this.scheduleMessageRefresh();
+  private resync(): Promise<void> {
+    if (!this.syncInFlight) {
+      this.syncInFlight = this.refreshAll().finally(() => { this.syncInFlight = null; });
     }
+    return this.syncInFlight;
   }
 
   async logoutHost(): Promise<void> {
@@ -1313,9 +1594,12 @@ export class AppState {
   }
 
   async refreshAll(): Promise<void> {
-    await this.refreshInitial();
-    if (this.selectedSessionId) await this.refreshMessages(this.selectedSessionId);
-    await Promise.all([this.refreshPermissions(), this.refreshQuestions()]);
+    await Promise.all([
+      this.refreshInitial(),
+      this.refreshMessages(),
+      this.selectedSessionId ? this.refreshTodos(this.selectedSessionId) : Promise.resolve(),
+      this.selectedSessionId ? this.refreshDiffs(this.selectedSessionId) : Promise.resolve()
+    ]);
   }
 }
 

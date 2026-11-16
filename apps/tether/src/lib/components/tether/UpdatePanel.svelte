@@ -1,9 +1,25 @@
 <script lang="ts">
-  import { APP_VERSION, FLATPAK_ID, FLATPAKREF_URL, GITHUB_URL, LATEST_RELEASE_API, RELEASES_URL } from '$lib/constants';
+  import { ANDYSU_HOST_URL, APP_VERSION, FLATPAK_ID, FLATPAKREF_URL, GITHUB_URL, LATEST_RELEASE_API, RELEASES_URL } from '$lib/constants';
+  import { compareVersions } from '$lib/api/version';
+  import { app } from '$lib/state/app.svelte';
   import { copyText, isAndroid, isFlatpak, isTauri, openExternal } from '$lib/platform';
   import { Root as Button } from '$lib/components/ui/button/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
   import { toast } from 'svelte-sonner';
+  import ToggleRow from './ToggleRow.svelte';
+  import { assetFor as pickAsset, type AssetKind } from '$lib/release-assets';
+  import {
+    andysuAvailable,
+    andysuMode,
+    andysuStatus,
+    applyAction,
+    applyAndySU,
+    canCheck,
+    checkAndySU,
+    initAndySU,
+    setAndySUMode,
+    statusText
+  } from '$lib/andysu';
   import Download from '@lucide/svelte/icons/download';
   import RefreshCw from '@lucide/svelte/icons/refresh-cw';
   import ExternalLink from '@lucide/svelte/icons/external-link';
@@ -32,6 +48,19 @@
   let error = $state<string | null>(null);
   let platform = $state<'android' | 'flatpak' | 'desktop' | 'web'>('web');
 
+  // Under an AndySU host the app updates itself, so the GitHub APK updater below stands down: the
+  // host's versionName is frozen and it would offer an APK install on every release. Plain builds
+  // (sideloaded APK, Flatpak, desktop, web) keep the section they always had.
+  const live = andysuAvailable();
+  let autoUpdate = $state(true);
+  $effect(() => {
+    if (!live) return;
+    autoUpdate = andysuMode() !== 'off';
+    return initAndySU((mode) => (autoUpdate = mode !== 'off'));
+  });
+  const liveAction = $derived(applyAction($andysuStatus));
+  const runningVersion = $derived($andysuStatus.runningVersion);
+
   $effect(() => {
     void detectPlatform();
   });
@@ -47,45 +76,51 @@
     return tag.replace(/^v/, '');
   }
 
-  function isNewer(latest: string, current: string): boolean {
-    const a = latest.split('.').map((part) => parseInt(part.replace(/\D.*/, ''), 10) || 0);
-    const b = current.split('.').map((part) => parseInt(part.replace(/\D.*/, ''), 10) || 0);
-    for (let i = 0; i < Math.max(a.length, b.length); i++) {
-      if ((a[i] ?? 0) > (b[i] ?? 0)) return true;
-      if ((a[i] ?? 0) < (b[i] ?? 0)) return false;
-    }
-    return false;
-  }
-
   async function check() {
     checking = true;
     error = null;
+    release = null;
+    latestVersion = '';
+    updateAvailable = false;
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 12_000);
     try {
-      const res = await fetch(LATEST_RELEASE_API, { headers: { Accept: 'application/vnd.github+json' } });
+      const res = await fetch(LATEST_RELEASE_API, {
+        headers: { Accept: 'application/vnd.github+json' },
+        signal: controller.signal
+      });
       if (!res.ok) throw new Error(res.status === 403 ? 'GitHub rate limit reached. Try again later.' : `GitHub returned ${res.status}.`);
       const data = (await res.json()) as Release;
+      const nextVersion = cleanVersion(data.tag_name ?? '');
+      const currentVersion = app.hostMode && app.host?.version ? app.host.version : APP_VERSION;
+      const comparison = compareVersions(nextVersion, currentVersion);
+      if (comparison === null) throw new Error('GitHub returned an invalid release version.');
       release = data;
-      latestVersion = cleanVersion(data.tag_name ?? '');
-      updateAvailable = isNewer(latestVersion, APP_VERSION);
-      if (!updateAvailable) toast.success('You are up to date', { description: `opencode-tether ${APP_VERSION}` });
+      latestVersion = nextVersion;
+      updateAvailable = comparison > 0;
+      if (!updateAvailable) toast.success('You are up to date', { description: `opencode-tether ${currentVersion}` });
     } catch (err) {
-      error = err instanceof Error ? err.message : 'Could not check for updates.';
+      error = err instanceof Error && err.name === 'AbortError'
+        ? 'Update check timed out. Try again.'
+        : err instanceof Error ? err.message : 'Could not check for updates.';
     } finally {
+      clearTimeout(timeout);
       checking = false;
     }
   }
 
-  function assetFor(kind: 'apk' | 'flatpak' | 'deb' | 'rpm' | 'appimage'): string | null {
-    if (!release) return null;
-    const match = release.assets.find((asset) => asset.name.toLowerCase().endsWith(`.${kind}`) || (kind === 'flatpak' && asset.name.toLowerCase().endsWith('.flatpak')));
-    return match?.browser_download_url ?? null;
+  function assetFor(kind: AssetKind): string | null {
+    return release ? pickAsset(release.assets, kind) : null;
   }
 
   async function manualInstall() {
     if (!release) return;
+    if (platform === 'flatpak') {
+      await copyCommand(`flatpak update ${FLATPAK_ID}`);
+      return;
+    }
     let url: string | null = null;
     if (platform === 'android') url = assetFor('apk');
-    else if (platform === 'flatpak') url = assetFor('flatpak') ?? FLATPAKREF_URL;
     else if (platform === 'desktop') url = assetFor('appimage') ?? (assetFor('deb') ?? assetFor('rpm'));
     if (!url) {
       await openExternal(release.html_url);
@@ -105,6 +140,42 @@
   );
 </script>
 
+{#if live}
+  <div class="space-y-3">
+    <div class="rounded-xl border border-border/60 bg-card/35 p-3">
+      <div class="flex items-start gap-2.5">
+        <span class="grid size-11 shrink-0 place-items-center rounded-xl border border-border/60 bg-muted/40 text-tether"><Smartphone class="size-5" /></span>
+        <div class="min-w-0 flex-1">
+          <div class="flex items-center gap-1.5">
+            <span class="text-sm font-semibold">opencode-tether</span>
+            {#if runningVersion}<Badge variant="outline" class="px-2 py-0.5 text-[11px]" data-testid="running-version">v{runningVersion}</Badge>{/if}
+          </div>
+          <div class="mt-1 text-xs text-muted-foreground">Android app · updates itself</div>
+        </div>
+      </div>
+      <p class="mt-3 text-sm" role="status" data-testid="update-status">{statusText($andysuStatus)}</p>
+      <div class="mt-3 flex flex-wrap gap-2">
+        {#if liveAction}
+          <Button size="sm" class="h-10 gap-1.5 text-sm" onclick={applyAndySU}>{liveAction}</Button>
+        {/if}
+        <Button variant="outline" size="sm" class="h-10 gap-1.5 text-sm" disabled={!canCheck($andysuStatus)} onclick={checkAndySU}>
+          <RefreshCw class="size-4" /> Check now
+        </Button>
+      </div>
+      <ToggleRow
+        label="Update automatically"
+        description="Check on open and hourly. UI updates reload live; native changes apply automatically (screen may reload)."
+        bind:checked={autoUpdate}
+        onChange={(value) => setAndySUMode(value ? 'auto' : 'off')}
+      />
+    </div>
+    <div class="flex items-center justify-between px-0.5 text-xs text-muted-foreground/50">
+      <button type="button" class="inline-flex items-center gap-1 hover:text-foreground" onclick={() => openExternal(GITHUB_URL)}>
+        <ExternalLink class="size-4" /> GitHub
+      </button>
+    </div>
+  </div>
+{:else}
 <div class="space-y-3">
   <div class="rounded-xl border border-border/60 bg-card/35 p-3">
     <div class="flex items-start gap-2.5">
@@ -132,10 +203,10 @@
         {#if release?.body}
           <p class="mt-1.5 line-clamp-5 whitespace-pre-line text-xs leading-relaxed text-muted-foreground">{release.body}</p>
         {/if}
-                  <Button size="sm" class="mt-3 h-10 gap-1.5 text-sm" onclick={manualInstall}>
-            <Download class="size-4" />
-            {#if platform === 'android'}Download APK{:else if platform === 'flatpak'}Update with Flatpak{:else if platform === 'desktop'}Download package{:else}Download{/if}
-          </Button>
+        <Button size="sm" class="mt-3 h-10 gap-1.5 text-sm" onclick={manualInstall}>
+          {#if platform === 'flatpak'}<Copy class="size-4" />{:else}<Download class="size-4" />{/if}
+          {#if platform === 'android'}Download APK{:else if platform === 'flatpak'}Copy update command{:else if platform === 'desktop'}Download package{:else}Download{/if}
+        </Button>
       </div>
     {:else if release && !updateAvailable}
       <div class="mt-3 flex items-center gap-2 text-xs text-emerald-300/80">
@@ -149,14 +220,18 @@
   </div>
 
   {#if platform === 'android'}
-    <div class="rounded-xl border border-amber-500/20 bg-amber-500/[0.04] p-3.5 text-xs leading-relaxed text-amber-200/80">
-      <div class="font-medium text-amber-100/90">Android updates are manual</div>
+    <div class="rounded-xl border border-tether/25 bg-tether/[0.04] p-3.5 text-xs leading-relaxed text-foreground/80">
+      <div class="font-medium text-tether">Automatic updates with AndySU</div>
       <p class="mt-1 text-muted-foreground">
-        Android installs are side-loaded, so the app cannot update itself silently. Download the new APK from GitHub Releases and install it over this app; your saved hosts and settings are kept.
+        Install the signed AndySU host once on Android 11+ (arm64). After that, opencode-tether checks and downloads updates automatically; UI updates apply live, native updates apply with a quick automatic relaunch. Your hosts, sessions, drafts and settings are kept.
       </p>
-      <Button variant="link" size="sm" class="mt-2 h-10 px-0 text-sm text-tether" onclick={() => openExternal(RELEASES_URL)}>
-        Open releases <ExternalLink class="size-4" />
+      <Button size="sm" class="mt-2.5 h-10 gap-1.5 text-sm" onclick={() => openExternal(ANDYSU_HOST_URL)}>
+        <Download class="size-4" /> Install AndySU host
       </Button>
+      <p class="mt-2 text-muted-foreground/60">
+        Older Android or another ABI?
+        <button type="button" class="text-tether underline underline-offset-2" onclick={() => openExternal(RELEASES_URL)}>Use the manual APK</button>.
+      </p>
     </div>
   {:else if platform === 'flatpak'}
     <div class="rounded-xl border border-border/60 bg-card/30 p-3.5 text-xs leading-relaxed text-muted-foreground">
@@ -196,3 +271,5 @@
     <span>Main-branch releases · {RELEASES_URL.replace('https://', '')}</span>
   </div>
 </div>
+
+{/if}

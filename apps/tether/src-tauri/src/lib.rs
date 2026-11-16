@@ -1,3 +1,6 @@
+#[cfg(target_os = "android")]
+mod web_assets;
+
 use std::path::Path;
 
 #[tauri::command]
@@ -19,6 +22,10 @@ fn app_info() -> serde_json::Value {
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    #[allow(unused_mut)]
+    let mut context = tauri::generate_context!();
+    #[cfg(target_os = "android")]
+    context.set_assets(Box::new(web_assets::WebAssets));
     tauri::Builder::default()
         .plugin(tauri_plugin_store::Builder::new().build())
         .plugin(tauri_plugin_os::init())
@@ -27,6 +34,6 @@ pub fn run() {
         .plugin(tauri_plugin_clipboard_manager::init())
         .plugin(tauri_plugin_notification::init())
         .invoke_handler(tauri::generate_handler![is_flatpak, app_info])
-        .run(tauri::generate_context!())
+        .run(context)
         .expect("error while running opencode-tether");
 }

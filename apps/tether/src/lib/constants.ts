@@ -3,6 +3,7 @@ export const APP_VERSION = '0.3.0';
 export const REPO = 'dixonSolutions/opencode-tether';
 export const GITHUB_URL = `https://github.com/${REPO}`;
 export const RELEASES_URL = `${GITHUB_URL}/releases`;
+export const ANDYSU_HOST_URL = `${GITHUB_URL}/releases/download/channel-live-arm64/opencode-tether-live-arm64.apk`;
 export const LATEST_RELEASE_API = `https://api.github.com/repos/${REPO}/releases/latest`;
 export const DOCS_URL = `${GITHUB_URL}#readme`;
 export const FLATPAK_ID = 'ai.opencode.tether';

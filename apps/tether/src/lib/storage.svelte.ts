@@ -10,6 +10,8 @@ class PersistentStore {
     clear(): Promise<void>;
   } | null = null;
   private loaded = false;
+  private writing: Promise<void> = Promise.resolve();
+  private dirty = new Set<string>();
   private memory: Json = {};
   private saveTimer: ReturnType<typeof setTimeout> | null = null;
 
@@ -47,12 +49,13 @@ class PersistentStore {
 
   set(key: string, value: unknown): void {
     this.memory[key] = value;
+    this.dirty.add(key);
     this.scheduleSave();
   }
 
   private scheduleSave(): void {
     if (this.saveTimer) clearTimeout(this.saveTimer);
-    this.saveTimer = setTimeout(() => void this.flush(), 250);
+    this.saveTimer = setTimeout(() => { void this.flush().catch(() => undefined); }, 250);
   }
 
   async flush(): Promise<void> {
@@ -60,23 +63,33 @@ class PersistentStore {
       clearTimeout(this.saveTimer);
       this.saveTimer = null;
     }
-    if (this.nativeStore) {
+    const keys = [...this.dirty];
+    this.dirty.clear();
+    if (!keys.length) return this.writing;
+    // Snapshot only in the delayed persistence task, never inside a toggle handler.
+    const snapshot = JSON.parse(JSON.stringify(this.memory)) as Json;
+    this.writing = this.writing.catch(() => undefined).then(async () => {
       try {
-        for (const [key, value] of Object.entries(this.memory)) await this.nativeStore.set(key, value);
-        await this.nativeStore.save();
+        if (this.nativeStore) {
+          for (const key of keys) await this.nativeStore.set(key, snapshot[key]);
+          await this.nativeStore.save();
+        } else {
+          localStorage.setItem('opencode-tether.store.v1', JSON.stringify(snapshot));
+        }
       } catch (error) {
-        console.warn('Failed to persist native settings', error);
+        keys.forEach(key => this.dirty.add(key));
+        console.warn('Failed to persist settings', error);
+        throw error;
       }
-      return;
-    }
-    try {
-      localStorage.setItem('opencode-tether.store.v1', JSON.stringify(this.memory));
-    } catch (error) {
-      console.warn('Failed to persist settings', error);
-    }
+    });
+    return this.writing;
   }
 
   async reset(): Promise<void> {
+    if (this.saveTimer) clearTimeout(this.saveTimer);
+    this.saveTimer = null;
+    await this.writing;
+    this.dirty.clear();
     this.memory = {};
     if (this.nativeStore) {
       try {

@@ -1,4 +1,5 @@
 import type { Remote } from '$lib/api/types';
+import { untrack } from 'svelte';
 import { normalizeBaseUrl } from '$lib/api/client';
 import { persistentStore } from '$lib/storage.svelte';
 
@@ -98,8 +99,8 @@ class SettingsState {
     this.hydrated = true;
     $effect.root(() => {
       $effect(() => {
-        const snapshot: SettingsData = {
-          remotes: this.remotes.map((remote) => ({ ...remote })),
+        const current = {
+          remotes: this.remotes,
           defaultRemoteId: this.defaultRemoteId,
           lastRemoteId: this.lastRemoteId,
           theme: this.theme,
@@ -112,15 +113,13 @@ class SettingsState {
           autoScroll: this.autoScroll,
           compact: this.compact,
           haptics: this.haptics,
-          favorites: [...this.favorites],
+          favorites: this.favorites,
           lastAgent: this.lastAgent,
-          lastModel: this.lastModel ? { ...this.lastModel } : null,
-          lastDirectory: { ...this.lastDirectory },
-          recentDirectories: Object.fromEntries(
-            Object.entries(this.recentDirectories).map(([key, list]) => [key, [...list]])
-          )
+          lastModel: this.lastModel,
+          lastDirectory: this.lastDirectory,
+          recentDirectories: this.recentDirectories
         };
-        persistentStore.set('settings', snapshot);
+        untrack(() => persistentStore.set('settings', current));
       });
     });
   }

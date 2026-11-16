@@ -26,7 +26,8 @@ export default defineConfig({
   envPrefix: ['VITE_', 'TAURI_ENV_*'],
   build: {
     target: process.env.TAURI_ENV_PLATFORM === 'windows' ? 'chrome105' : 'safari15',
-    minify: !process.env.TAURI_ENV_DEBUG ? 'esbuild' : false,
-    sourcemap: !!process.env.TAURI_ENV_DEBUG
+    // Android debug APKs also need realistic interaction performance; maps retain debuggability.
+    minify: 'esbuild',
+    sourcemap: process.env.TAURI_ENV_DEBUG === 'true'
   }
 });

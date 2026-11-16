@@ -8,7 +8,6 @@
   import { Root as Button } from '$lib/components/ui/button/index.js';
   import { Badge } from '$lib/components/ui/badge/index.js';
   import { Root as Separator } from '$lib/components/ui/separator/index.js';
-  import * as Tabs from '$lib/components/ui/tabs/index.js';
   import ToggleRow from './ToggleRow.svelte';
   import UpdatePanel from './UpdatePanel.svelte';
   import Brand from './Brand.svelte';
@@ -34,9 +33,25 @@
   import X from '@lucide/svelte/icons/x';
 
   let { open = $bindable(false), onOpenRemotes }: { open?: boolean; onOpenRemotes?: () => void } = $props();
-  let tab = $state('general');
+  const tabs = [
+    { value: 'general', label: 'General' },
+    { value: 'hosts', label: 'Host' },
+    { value: 'updates', label: 'Updates' },
+    { value: 'about', label: 'About' }
+  ] as const;
+  type SettingsTab = (typeof tabs)[number]['value'];
+  let tab = $state<SettingsTab>('general');
   let platform = $state('');
   let resetting = $state(false);
+
+  function onTabKeydown(event: KeyboardEvent, index: number) {
+    const direction = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+    if (!direction) return;
+    event.preventDefault();
+    const next = (index + direction + tabs.length) % tabs.length;
+    tab = tabs[next].value;
+    document.getElementById(`settings-tab-${tabs[next].value}`)?.focus();
+  }
 
   $effect(() => {
     if (!open) return;
@@ -60,6 +75,7 @@
   }
 
   async function toggleNotifications(next: boolean) {
+    settings.notifications = next;
     if (next) {
       const granted = await requestNotificationPermission();
       if (!granted) {
@@ -73,7 +89,7 @@
 
   function manageRemotes() {
     open = false;
-    setTimeout(() => onOpenRemotes?.(), 120);
+    onOpenRemotes?.();
   }
 
   async function resetLocal() {
@@ -111,26 +127,38 @@
       </Sheet.Close>
     </Sheet.Header>
 
-    <Tabs.Root bind:value={tab} class="flex min-h-0 flex-1 flex-col">
-      <Tabs.List class="mx-3 mt-3 grid w-auto grid-cols-4">
-        <Tabs.Trigger value="general" class="text-xs sm:text-sm">General</Tabs.Trigger>
-        <Tabs.Trigger value="hosts" class="text-xs sm:text-sm">Host</Tabs.Trigger>
-        <Tabs.Trigger value="updates" class="text-xs sm:text-sm">Updates</Tabs.Trigger>
-        <Tabs.Trigger value="about" class="text-xs sm:text-sm">About</Tabs.Trigger>
-      </Tabs.List>
+    <div class="flex min-h-0 flex-1 flex-col">
+      <div class="mx-3 mt-3 grid h-12 grid-cols-4 items-center rounded-lg bg-muted p-[3px]" role="tablist" aria-label="Settings sections">
+        {#each tabs as item, index (item.value)}
+          <button
+            type="button"
+            role="tab"
+            id={`settings-tab-${item.value}`}
+            aria-controls={`settings-panel-${item.value}`}
+            aria-selected={tab === item.value}
+            tabindex={tab === item.value ? 0 : -1}
+            class={cn(
+              'min-h-11 rounded-md px-1.5 py-0.5 text-xs font-medium transition-colors sm:text-sm',
+              tab === item.value ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+            )}
+            onclick={() => (tab = item.value)}
+            onkeydown={(event) => onTabKeydown(event, index)}
+          >{item.label}</button>
+        {/each}
+      </div>
 
       <div class="android-safe-bottom tether-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain px-3 pb-4 pt-3 sm:px-4">
-        <Tabs.Content value="general" class="space-y-3">
+        <div role="tabpanel" id="settings-panel-general" aria-labelledby="settings-tab-general" hidden={tab !== 'general'} class="space-y-3">
           <section class="rounded-xl border border-border/60 bg-card/30 p-3">
             <h3 class="text-sm font-semibold uppercase tracking-[0.14em] text-muted-foreground/60">Appearance</h3>
             <div class="mt-2 grid grid-cols-3 gap-1 rounded-lg border border-border/60 bg-muted/30 p-0.5">
-              <button type="button" class={cn('flex min-h-10 items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors', settings.theme === 'dark' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')} aria-pressed={settings.theme === 'dark'} onclick={() => applyTheme('dark')}>
+              <button type="button" class={cn('flex min-h-11 items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors', settings.theme === 'dark' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')} aria-pressed={settings.theme === 'dark'} onclick={() => applyTheme('dark')}>
                 <Moon class="size-4" /> Dark
               </button>
-              <button type="button" class={cn('flex min-h-10 items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors', settings.theme === 'light' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')} aria-pressed={settings.theme === 'light'} onclick={() => applyTheme('light')}>
+              <button type="button" class={cn('flex min-h-11 items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors', settings.theme === 'light' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')} aria-pressed={settings.theme === 'light'} onclick={() => applyTheme('light')}>
                 <Sun class="size-4" /> Light
               </button>
-              <button type="button" class={cn('flex min-h-10 items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors', settings.theme === 'system' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')} aria-pressed={settings.theme === 'system'} onclick={() => applyTheme('system')}>
+              <button type="button" class={cn('flex min-h-11 items-center justify-center gap-2 rounded-lg px-2 py-2 text-sm font-medium transition-colors', settings.theme === 'system' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground')} aria-pressed={settings.theme === 'system'} onclick={() => applyTheme('system')}>
                 <Monitor class="size-4" /> System
               </button>
             </div>
@@ -169,9 +197,9 @@
             </span>
             <Trash2 class="size-4 text-red-300/60" />
           </button>
-        </Tabs.Content>
+        </div>
 
-        <Tabs.Content value="hosts" class="space-y-3">
+        <div role="tabpanel" id="settings-panel-hosts" aria-labelledby="settings-tab-hosts" hidden={tab !== 'hosts'} class="space-y-3">
           <section class="rounded-xl border border-border/60 bg-card/30 p-3">
             <div class="flex items-start gap-2.5">
               <span class="grid size-11 shrink-0 place-items-center rounded-xl border border-border/60 bg-muted/40"><Server class="size-5 text-tether" /></span>
@@ -218,13 +246,13 @@
             <span class="inline-flex items-center gap-1"><Smartphone class="size-4" /> {platform || 'Web'} build</span>
             <span>opencode-tether {APP_VERSION}</span>
           </div>
-        </Tabs.Content>
+        </div>
 
-        <Tabs.Content value="updates">
+        <div role="tabpanel" id="settings-panel-updates" aria-labelledby="settings-tab-updates" hidden={tab !== 'updates'} class="space-y-3">
           <UpdatePanel />
-        </Tabs.Content>
+        </div>
 
-        <Tabs.Content value="about" class="space-y-3">
+        <div role="tabpanel" id="settings-panel-about" aria-labelledby="settings-tab-about" hidden={tab !== 'about'} class="space-y-3">
           <div class="flex flex-col items-center rounded-xl border border-border/60 bg-card/30 px-4 py-5 text-center">
             <Brand size={56} wordmark />
             <Badge variant="outline" class="mt-2 px-2.5 py-1 text-xs uppercase tracking-[0.12em]">unofficial · hobby project</Badge>
@@ -252,8 +280,8 @@
           <div class="flex items-center justify-center gap-1.5 py-2 text-xs text-muted-foreground/40">
             Made with <Heart class="size-4 text-tether/70" /> for the opencode community
           </div>
-        </Tabs.Content>
+        </div>
       </div>
-    </Tabs.Root>
+    </div>
   </Sheet.Content>
 </Sheet.Root>

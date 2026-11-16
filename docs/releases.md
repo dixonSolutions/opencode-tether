@@ -31,7 +31,7 @@ sudo opencode-tether update
 sudo systemctl restart opencode-tether
 ```
 
-`update` resolves the latest GitHub release, picks the asset for the current OS/arch, downloads it, verifies the digest (asset `digest`, sidecar `.sha256`, or `SHA256SUMS`), writes a sibling temp file, and atomically renames it over the running binary. It refuses to run inside Flatpak.
+`update` resolves the latest GitHub release, picks the asset for the current OS/arch, downloads it, verifies the digest (asset `digest`, sidecar `.sha256`, or `SHA256SUMS`), writes a sibling temp file, and atomically renames it over the running binary. The staged file and containing directory are synced. Checksums are mandatory, including with `--force`; that flag only permits reinstalling or downgrading deliberately. `--check` never replaces the executable. Stable release versions use SemVer precedence, including prereleases. It refuses to run inside Flatpak.
 
 ### APT / DNF
 
@@ -49,7 +49,15 @@ install.sh
 
 ### Android
 
-Manual only. The app's **Settings → Updates** panel checks GitHub Releases and opens the APK download. Install it over the existing app.
+Plain APK builds keep **Settings → Updates → Download APK**. Android 11+ users can install the production-signed `opencode-tether-live-arm64.apk` from the `channel-live-arm64` prerelease once, over the plain APK, preserving application data. It must use the same application ID/signing certificate and an equal or greater Android version code. Older Android versions keep the plain APK.
+
+Under the AndySU host, updates check on open and every 60 minutes. `mode = "auto"`, `apply = "live"`, `live_fallback = "restart"`, and `restart_when = "now"` are required. **Update automatically** persists the user's choice. A manual **Check now** while disabled performs one download-only check; **Apply now** appears only for a staged release. A host-shell replacement still requires Android installation approval.
+
+Web-only releases reload the WebView in the same process using a separate `assets/tether-web.zip` and Tauri `Context::set_assets`. They qualify only when every other host-verified component digest is unchanged (except the payload descriptor). Native/JVM/resource changes apply by automatic restart. No in-process JNI/Rust replacement is attempted. Build Android with `npx tauri android build --config src-tauri/tauri.android.conf.json --apk`; the platform config packages web assets and keeps them out of the native library. Do not use `--hot` for this archive: transparent mode must run the trial/health handler.
+
+The independent `andysu-live` job splits the signed universal APK for arm64 and publishes the signed `live-arm64` channel. Its host APK belongs only on the channel prerelease, never the version release: older clients pick the first APK from `releases/latest`. Weekly `andysu-resign.yml` renews the manifest. Both jobs pin AndySU 0.1.135. Production signing needs `ANDYSU_SIGNING_KEY` and `ANDYSU_SIGNING_CERT` in addition to the Android keystore secrets; these were provisioned on 2026-11-16. Only the root public PEM is in the repository. Renew the delegated release certificate before expiry using the offline root; never put private keys in this tree.
+
+Local verification does not publish anything. Shipping still requires owner review, pushing the changes, and the normal release workflow. See [the verification report](verification-speed-andysu-2026-11-16.md).
 
 ### Flatpak
 

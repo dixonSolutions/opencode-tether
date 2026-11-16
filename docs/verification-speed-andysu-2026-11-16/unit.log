@@ -1,0 +1,25 @@
+
+> @opencode-tether/app@0.3.0 test:unit
+> playwright test --config playwright.unit.config.ts
+
+
+Running 12 tests using 2 workers
+
+(node:374093) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:374094) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+  ✓   1 src/lib/release-assets.unit.ts:34:1 › the extracted picker behaves exactly like the old one (8ms)
+  ✓   3 src/lib/release-assets.unit.ts:40:1 › the old picker takes the plain APK from a version release (1ms)
+  ✓   2 src/lib/andysu.unit.ts:4:1 › AndySU is unavailable without the bridge (5ms)
+  ✓   4 src/lib/release-assets.unit.ts:44:1 › the live APK is named, and it would fool the old picker if it were on a version release (1ms)
+  ✓   5 src/lib/andysu.unit.ts:8:1 › an unchecked state is never called up to date (3ms)
+  ✓   6 src/lib/release-assets.unit.ts:51:1 › the release workflow never attaches the live APK to a version release (6ms)
+  ✓   7 src/lib/andysu.unit.ts:14:1 › every state has one plain line (4ms)
+  ✓   8 src/lib/release-assets.unit.ts:65:1 › nothing the existing release waits for depends on the live job (1ms)
+  ✓   9 src/lib/andysu.unit.ts:29:1 › an action is offered only when there is something to apply (2ms)
+  ✓  10 src/lib/release-assets.unit.ts:72:1 › the channel release is a prerelease, so releases/latest (all old clients read) never returns it (0ms)
+  ✓  11 src/lib/andysu.unit.ts:37:1 › checking is not offered while one is running (1ms)
+  ✓  12 src/lib/andysu.unit.ts:44:1 › live wording requires a matching running payload, and staged never promises manual reopen (3ms)
+
+  12 passed (596ms)

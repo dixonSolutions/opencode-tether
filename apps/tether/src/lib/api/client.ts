@@ -52,6 +52,8 @@ export class OpencodeClient {
   readonly baseUrl: string;
   readonly auth: AuthCreds;
   private authHeader: string | null;
+  private lastEventId = '';
+  private seenEventIds = new Set<string>();
 
   constructor(baseUrl: string, auth: AuthCreds = {}) {
     this.baseUrl = normalizeBaseUrl(baseUrl);
@@ -71,23 +73,18 @@ export class OpencodeClient {
   }
 
   async raw(path: string, init: RequestInit = {}, timeoutMs = 30_000): Promise<Response> {
-    const controller = new AbortController();
-    const timer = timeoutMs > 0 ? setTimeout(() => controller.abort(new DOMException('Request timed out', 'TimeoutError')), timeoutMs) : null;
-    const onAbort = () => controller.abort((init.signal as AbortSignal | undefined)?.reason);
-    init.signal?.addEventListener('abort', onAbort, { once: true });
-    try {
-      return await fetch(this.url(path), {
-        ...init,
-        headers: this.headers(init.headers as Record<string, string> | undefined),
-        signal: controller.signal
-      });
-    } finally {
-      if (timer) clearTimeout(timer);
-      init.signal?.removeEventListener('abort', onAbort);
-    }
+    const signals = [init.signal, timeoutMs > 0 ? AbortSignal.timeout(timeoutMs) : null].filter(
+      (signal): signal is AbortSignal => !!signal
+    );
+    return fetch(this.url(path), {
+      ...init,
+      credentials: 'same-origin',
+      headers: this.headers(init.headers as Record<string, string> | undefined),
+      signal: signals.length ? AbortSignal.any(signals) : undefined
+    });
   }
 
-  async request<T>(path: string, init: RequestInit = {}, timeoutMs = 30_000): Promise<T> {
+  async request<T>(path: string, init: RequestInit = {}, timeoutMs = 30_000, onHeaders?: (headers: Headers) => void): Promise<T> {
     const res = await this.raw(path, init, timeoutMs);
     const text = await res.text();
     let body: unknown = text;
@@ -103,11 +100,20 @@ export class OpencodeClient {
     if (!res.ok) {
       throw new ApiError(res.status, describeError(res.status, body), body as ApiErrorBody | string | null);
     }
+    onHeaders?.(res.headers);
     return body as T;
   }
 
   get<T>(path: string, timeoutMs = 30_000): Promise<T> {
     return this.request<T>(path, { method: 'GET' }, timeoutMs);
+  }
+
+  async getPage<T>(path: string, timeoutMs = 30_000): Promise<{ data: T; nextCursor: string | null }> {
+    let nextCursor: string | null = null;
+    const data = await this.request<T>(path, { method: 'GET' }, timeoutMs, (headers) => {
+      nextCursor = headers.get('x-next-cursor');
+    });
+    return { data, nextCursor };
   }
 
   post<T>(path: string, data?: unknown, timeoutMs = 60_000): Promise<T> {
@@ -170,8 +176,8 @@ export class OpencodeClient {
     return this.post<unknown>('/api/tether/logout', undefined, 10_000);
   }
 
-  async *stream(path: string, signal: AbortSignal): AsyncGenerator<TetherEvent> {
-    const res = await this.raw(path, { method: 'GET', headers: { Accept: 'text/event-stream' }, signal }, 0);
+  async *stream(path: string, signal: AbortSignal, onActivity?: () => void): AsyncGenerator<TetherEvent> {
+    const res = await this.raw(path, { method: 'GET', headers: { Accept: 'text/event-stream', ...(this.lastEventId ? { 'Last-Event-ID': this.lastEventId } : {}) }, cache: 'no-store', signal }, 0);
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new ApiError(res.status, describeError(res.status, text), text);
@@ -180,13 +186,20 @@ export class OpencodeClient {
     const reader = res.body.getReader();
     const decoder = new TextDecoder();
     let buffer = '';
+    let pendingCR = false;
+    let yieldedAt = performance.now();
     try {
       while (!signal.aborted) {
         const { value, done } = await reader.read();
         if (done) break;
-        buffer += decoder.decode(value, { stream: true }).replace(/\r\n/g, '\n');
+        onActivity?.();
+        let chunk = decoder.decode(value, { stream: true });
+        if (pendingCR && chunk.startsWith('\n')) chunk = chunk.slice(1);
+        if (chunk.length) pendingCR = chunk.endsWith('\r');
+        buffer += chunk.replace(/\r\n?/g, '\n');
         let boundary = buffer.indexOf('\n\n');
-        while (boundary !== -1) {
+        while (boundary !== -1 && !signal.aborted) {
+          if (boundary > 16 * 1024 * 1024) throw new ApiError(0, 'Event frame exceeds 16 MiB');
           const block = buffer.slice(0, boundary);
           buffer = buffer.slice(boundary + 2);
           const data = block
@@ -194,16 +207,30 @@ export class OpencodeClient {
             .filter((line) => line.startsWith('data:'))
             .map((line) => line.slice(5).trimStart())
             .join('\n');
-          if (data) {
+          const idLine = block.split('\n').find((line) => line.startsWith('id:'));
+          const id = idLine?.slice(3).replace(/^ /, '');
+          if (id !== undefined && !id.includes('\0')) this.lastEventId = id;
+          if (data && (!id || !this.seenEventIds.has(id))) {
             try {
-              const parsed = JSON.parse(data) as TetherEvent;
-              if (parsed && typeof parsed.type === 'string') yield parsed;
+              const parsed = JSON.parse(data) as TetherEvent & { payload?: TetherEvent };
+              if (parsed && (typeof parsed.type === 'string' || typeof parsed.payload?.type === 'string')) {
+                if (id) {
+                  this.seenEventIds.add(id);
+                  if (this.seenEventIds.size > 2048) this.seenEventIds.delete(this.seenEventIds.values().next().value!);
+                }
+                yield parsed;
+              }
             } catch {
               // Ignore keepalive/partial frames.
             }
           }
+          if (performance.now() - yieldedAt >= 8) {
+            await new Promise<void>((resolve) => setTimeout(resolve, 0));
+            yieldedAt = performance.now();
+          }
           boundary = buffer.indexOf('\n\n');
         }
+        if (buffer.length > 16 * 1024 * 1024) throw new ApiError(0, 'Event frame exceeds 16 MiB');
       }
     } finally {
       reader.releaseLock();

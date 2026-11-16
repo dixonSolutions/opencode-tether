@@ -233,10 +233,10 @@ jobs:
           keyAlias=$ANDROID_KEY_ALIAS
           keyPassword=$ANDROID_KEY_PASSWORD
           EOF
-            npx tauri android build --apk
+            npx tauri android build --config src-tauri/tauri.android.conf.json --apk
           else
             echo "No Android signing secrets; building a debug-signed APK." >&2
-            npx tauri android build --debug --apk
+            npx tauri android build --config src-tauri/tauri.android.conf.json --debug --apk
           fi
           mkdir -p ../../dist
           find src-tauri/gen/android/app/build/outputs/apk -name '*.apk' -print
@@ -389,3 +389,116 @@ jobs:
 
             SHA256 sums are attached as `SHA256SUMS`.
           files: dist/*
+
+  # AndySU: a host APK for Android 11+ that follows a signed channel, so later releases arrive
+  # without reinstalling. Nothing above depends on this job, it cannot fail the run
+  # (continue-on-error), and it skips cleanly while the AndySU signing key or the Android release
+  # keystore is not set. The plain APK, Flatpak, desktop, server and package jobs ship unchanged.
+  #
+  # The live host APK is attached only to the channel's own pre-release (channel-live-arm64),
+  # never to the version release: installed clients pick the first asset ending in .apk from
+  # releases/latest, and a host APK there would be offered as their update
+  # (apps/tether/src/lib/release-assets.unit.ts).
+  andysu-live:
+    name: andysu live
+    needs: [meta, android, release]
+    runs-on: ubuntu-24.04
+    continue-on-error: true
+    concurrency:
+      group: andysu-live-arm64
+      cancel-in-progress: false
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check signing availability
+        id: enabled
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SIGNING_KEY: ${{ secrets.ANDYSU_SIGNING_KEY }}
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          TAG: ${{ needs.meta.outputs.tag }}
+        run: |
+          if [ -z "$SIGNING_KEY" ]; then echo 'AndySU signing key absent; skipping live release'
+          elif [ -z "$KEYSTORE" ]; then echo 'Android keystore absent; skipping live release'
+          elif ! gh release view "$TAG" >/dev/null 2>&1; then echo "Release $TAG was not published; skipping live release"
+          else echo "value=true" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-java@v4
+        if: steps.enabled.outputs.value == 'true'
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: android-actions/setup-android@v3
+        if: steps.enabled.outputs.value == 'true'
+        with:
+          packages: platform-tools
+      - uses: actions/download-artifact@v4
+        if: steps.enabled.outputs.value == 'true'
+        with:
+          name: android
+          path: apk
+      - name: Refuse to republish an older run
+        if: steps.enabled.outputs.value == 'true'
+        id: newest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          # A re-run of an old workflow run must not move the channel back. A newer run that has
+          # not failed will publish its own live release.
+          newer=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/release.yml/runs?per_page=30" \
+            --jq "[.workflow_runs[] | select(.run_number > $GITHUB_RUN_NUMBER and .conclusion != \"failure\" and .conclusion != \"cancelled\")] | length")
+          if [ "$newer" != 0 ]; then echo 'A newer release run exists; skipping live release'; else echo "value=true" >> "$GITHUB_OUTPUT"; fi
+      - name: Split signed APK with pinned AndySU
+        if: steps.newest.outputs.value == 'true'
+        env:
+          VERSION: ${{ needs.meta.outputs.version }}
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$KEYSTORE_PASSWORD" && test -n "$KEY_ALIAS"
+          base=https://github.com/dixonSolutions/AndySU/releases/download/v0.1.135
+          curl -fsSL "$base/andysu-x86_64-unknown-linux-musl" -o "$RUNNER_TEMP/andysu"
+          curl -fsSL "$base/andysu-host-template-0.1.135.zip" -o "$RUNNER_TEMP/host-template.zip"
+          chmod +x "$RUNNER_TEMP/andysu"
+          "$RUNNER_TEMP/andysu" host-config --toml andysu.toml --config-out "$RUNNER_TEMP/config.json" --host-out "$RUNNER_TEMP/host.json"
+          umask 077
+          printf '%s' "$KEYSTORE" | base64 -d > "$RUNNER_TEMP/release.keystore"
+          trap 'rm -f "$RUNNER_TEMP/release.keystore" "$RUNNER_TEMP/split.p12"' EXIT
+          # `andysu split` takes one password for store and key; the app's keystore may have two.
+          keytool -importkeystore -noprompt -srckeystore "$RUNNER_TEMP/release.keystore" -srcstorepass "$KEYSTORE_PASSWORD" \
+            -srcalias "$KEY_ALIAS" -srckeypass "${KEY_PASSWORD:-$KEYSTORE_PASSWORD}" \
+            -destkeystore "$RUNNER_TEMP/split.p12" -deststoretype PKCS12 -deststorepass "$KEYSTORE_PASSWORD" -destalias "$KEY_ALIAS"
+          "$RUNNER_TEMP/andysu" split "apk/opencode-tether-$VERSION-android-universal.apk" --out split --transparent --abi arm64-v8a --version "$VERSION" --host-api 3 \
+            --host-template "$RUNNER_TEMP/host-template.zip" --config "$RUNNER_TEMP/config.json" \
+            --keystore "$RUNNER_TEMP/split.p12" --ks-pass env:KEYSTORE_PASSWORD --key-alias "$KEY_ALIAS"
+          # Android refuses a downgrade: the host's versionCode must not be below the plain APK's
+          # (the android job stamps 1000 + run number; split keeps it).
+          aapt="$(find "$ANDROID_HOME/build-tools" -name aapt | sort -V | tail -n1)"
+          plain_code=$("$aapt" dump badging "apk/opencode-tether-$VERSION-android-universal.apk" | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p" | head -n1)
+          host_code=$("$aapt" dump badging split/host.apk | sed -n "s/.*versionCode='\([0-9]*\)'.*/\1/p" | head -n1)
+          test -n "$plain_code" && test -n "$host_code" && test "$host_code" -ge "$plain_code"
+      - name: Publish signed channel
+        if: steps.newest.outputs.value == 'true'
+        uses: dixonSolutions/AndySU/actions/publish@v0.1.135
+        with:
+          payload: split/payload
+          config: andysu.toml
+          signing-key: ${{ secrets.ANDYSU_SIGNING_KEY }}
+          signing-cert: ${{ secrets.ANDYSU_SIGNING_CERT }}
+          version: ${{ needs.meta.outputs.version }}
+          pack-args: --no-rename
+          andysu-version: 0.1.135
+      - name: Attach live APK to the channel release
+        if: steps.newest.outputs.value == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          LIVE_APK=opencode-tether-live-arm64.apk
+          cp split/host.apk "$LIVE_APK"
+          gh release upload channel-live-arm64 "$LIVE_APK" --clobber
+          # releases/latest, which every installed Updates tab reads, skips pre-releases.
+          gh release edit channel-live-arm64 --prerelease --latest=false

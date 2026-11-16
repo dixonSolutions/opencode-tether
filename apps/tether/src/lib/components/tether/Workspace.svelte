@@ -4,7 +4,12 @@
   import ChatView from './ChatView.svelte';
   import SessionPanel from './SessionPanel.svelte';
   import RemotesSheet from './RemotesSheet.svelte';
-  import SettingsSheet from './SettingsSheet.svelte';
+  let SettingsSheet = $state<typeof import('./SettingsSheet.svelte').default | null>(null);
+  const loadSettingsSheet = () => import('./SettingsSheet.svelte').then(module => { SettingsSheet = module.default; });
+  // Settings is the most-used secondary surface; start its chunk with the workspace instead of
+  // waiting for the first tap or a 500 ms idle callback.
+  void loadSettingsSheet();
+  $effect(() => { if (settingsOpen) void loadSettingsSheet(); });
   import * as Sheet from '$lib/components/ui/sheet/index.js';
   import { swipe } from '$lib/gestures';
   import { tick } from 'svelte';
@@ -138,4 +143,4 @@
 </Sheet.Root>
 
 <RemotesSheet bind:open={remotesOpen} />
-<SettingsSheet bind:open={settingsOpen} onOpenRemotes={() => (remotesOpen = true)} />
+{#if SettingsSheet}<SettingsSheet bind:open={settingsOpen} onOpenRemotes={() => (remotesOpen = true)} />{/if}

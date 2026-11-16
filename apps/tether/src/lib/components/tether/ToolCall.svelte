@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { app } from '$lib/state/app.svelte';
   import type { ToolPart } from '$lib/api/types';
   import { settings } from '$lib/state/settings.svelte';
   import { copyText, formatDuration } from '$lib/platform';
@@ -45,6 +46,20 @@
 
   const icon = $derived(icons[part.tool] ?? Wrench);
   const status = $derived(part.state.status);
+  const waitingQuestion = $derived(part.tool === 'question' && (status === 'running' || status === 'pending'));
+  const question = $derived(app.sessionQuestions.find((request) => {
+    const tool = request.tool as { callID?: string; messageID?: string } | undefined;
+    return tool?.callID === part.callID && tool?.messageID === part.messageID;
+  }));
+
+  function showQuestion() {
+    const request = question ?? app.sessionQuestions[0];
+    if (request) {
+      const card = document.getElementById(`question-${request.id}`);
+      card?.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+      card?.focus({ preventScroll: true });
+    } else void app.refreshQuestions();
+  }
   const input = $derived(part.state.status === 'pending' ? (part.state.input ?? {}) : part.state.input);
   const duration = $derived(
     part.state.status === 'completed' || part.state.status === 'error'
@@ -79,11 +94,12 @@
   const output = $derived.by(() => {
     if (part.state.status === 'completed') return part.state.output ?? '';
     if (part.state.status === 'error') return part.state.error ?? '';
+    if (part.state.status === 'running' && typeof part.state.metadata?.output === 'string') return part.state.metadata.output;
     return '';
   });
 
   const outputPreview = $derived(output.length > 24_000 ? `${output.slice(0, 24_000)}\n… ${output.length - 24_000} more characters` : output);
-  const inputJson = $derived(JSON.stringify(input ?? {}, null, 2));
+  const inputJson = $derived(expanded ? JSON.stringify(input ?? {}, null, 2).slice(0, 24_000) : '');
 
   async function copyOutput() {
     const ok = await copyText(output);
@@ -152,6 +168,15 @@
     </span>
     <ChevronRight class={cn('mt-1 size-4 shrink-0 text-muted-foreground/50 transition-transform', expanded && 'rotate-90')} />
   </button>
+
+  {#if waitingQuestion}
+    <div class="border-t border-sky-500/20 px-3.5 py-3 text-sm text-sky-300">
+      <p>Waiting for your answer in the question panel below.</p>
+      <button type="button" class="mt-1 min-h-11 underline underline-offset-4" onclick={showQuestion}>
+        {question || app.sessionQuestions.length ? 'Go to question' : 'Reload questions'}
+      </button>
+    </div>
+  {/if}
 
   {#if expanded}
     <div class="border-t border-border/60 bg-background/30 px-3.5 py-3">

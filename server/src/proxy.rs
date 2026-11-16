@@ -3,7 +3,6 @@ use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
 use axum::extract::{OriginalUri, Path, State};
 use axum::http::{HeaderMap, HeaderName, Method, Request, Response, StatusCode};
 use axum::response::{IntoResponse, Response as AxumResponse};
-use base64::Engine;
 use futures_util::{SinkExt, StreamExt};
 use serde_json::json;
 
@@ -172,6 +171,28 @@ fn percent_decode(value: &str) -> String {
     percent_encoding::percent_decode_str(value).decode_utf8_lossy().to_string()
 }
 
+fn authorize_websocket_query(auth: &crate::auth::Auth, query: &str) -> (bool, String) {
+    let mut allowed = false;
+    let mut kept = Vec::new();
+    for pair in query.split('&').filter(|pair| !pair.is_empty()) {
+        let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
+        match key {
+            "ticket" => {
+                // A connect ticket belongs to opencode, not this host. Keep it
+                // for upstream validation, but never treat it as host auth.
+                kept.push(pair.to_string());
+            }
+            "auth_token" => {
+                if let Some((user, password)) = parse_auth_token(value) {
+                    allowed |= auth.verify_credentials(&user, &password);
+                }
+            }
+            _ => kept.push(pair.to_string()),
+        }
+    }
+    (allowed, kept.join("&"))
+}
+
 pub async fn websocket(
     State(state): State<AppState>,
     Path(_pty_id): Path<String>,
@@ -181,31 +202,10 @@ pub async fn websocket(
 ) -> AxumResponse {
     let mut allowed = state.auth.authorize(&headers).is_some();
     let mut upstream_query = uri.query().unwrap_or("").to_string();
-    let mut forwarded_auth: Option<String> = None;
     if let Some(query) = uri.query() {
-        let mut kept = Vec::new();
-        for pair in query.split('&') {
-            let (key, value) = pair.split_once('=').unwrap_or((pair, ""));
-            match key {
-                "ticket" => {
-                    if !value.is_empty() {
-                        // The ticket is minted by an authenticated request and validated by opencode.
-                        allowed = true;
-                    }
-                    kept.push(pair.to_string());
-                }
-                "auth_token" => {
-                    if let Some((user, password)) = parse_auth_token(value) {
-                        if state.auth.verify_credentials(&user, &password) {
-                            allowed = true;
-                            forwarded_auth = Some(format!("Basic {}", base64::engine::general_purpose::STANDARD.encode(format!("{user}:{password}"))));
-                        }
-                    }
-                }
-                _ => kept.push(pair.to_string()),
-            }
-        }
-        upstream_query = kept.join("&");
+        let (query_allowed, filtered_query) = authorize_websocket_query(&state.auth, query);
+        allowed |= query_allowed;
+        upstream_query = filtered_query;
     }
     if !allowed {
         return crate::host::unauthorized();
@@ -227,7 +227,10 @@ pub async fn websocket(
             request.headers_mut().insert(name, value);
         }
     }
-    if let Some(auth) = state.config.upstream_auth_header().or(forwarded_auth) {
+    // The auth_token query parameter authenticates the client to this host. It
+    // must never become upstream credentials; upstream auth is configured
+    // separately and injected only from the host's config.
+    if let Some(auth) = state.config.upstream_auth_header() {
         if let Ok(value) = http::HeaderValue::from_str(&auth) {
             request.headers_mut().insert(http::header::AUTHORIZATION, value);
         }
@@ -297,6 +300,7 @@ async fn bridge(client: WebSocket, upstream: tokio_tungstenite::WebSocketStream<
 #[cfg(test)]
 mod tests {
     use super::*;
+    use base64::Engine;
 
     #[test]
     fn detects_api_paths() {
@@ -306,6 +310,36 @@ mod tests {
         assert!(!is_api_path("/api/tether/info"));
         assert!(!is_api_path("/"));
         assert!(!is_api_path("/assets/index.js"));
+    }
+
+    #[test]
+    fn websocket_auth_token_authorizes_host_but_is_not_forwarded() {
+        let auth = crate::auth::Auth::new(
+            "alice".into(),
+            crate::config::hash_password("hunter2").unwrap(),
+            vec![7; 32],
+            30,
+        );
+        let encoded = base64::engine::general_purpose::STANDARD.encode("alice:hunter2");
+        let (allowed, query) = authorize_websocket_query(&auth, &format!("auth_token={encoded}&foo=bar"));
+
+        assert!(allowed);
+        assert_eq!(query, "foo=bar");
+    }
+
+    #[test]
+    fn websocket_ticket_does_not_authorize_host_by_itself() {
+        let auth = crate::auth::Auth::new(
+            "alice".into(),
+            crate::config::hash_password("hunter2").unwrap(),
+            vec![7; 32],
+            30,
+        );
+
+        let (allowed, query) = authorize_websocket_query(&auth, "ticket=arbitrary");
+
+        assert!(!allowed);
+        assert_eq!(query, "ticket=arbitrary");
     }
 
 }

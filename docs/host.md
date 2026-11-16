@@ -147,6 +147,10 @@ sudo opencode-tether update          # checks GitHub releases, verifies SHA-256,
 sudo systemctl restart opencode-tether
 ```
 
+The updater checks GitHub's latest stable release and compares strict semantic versions, including prerelease ordering. It downloads the matching host binary, requires and verifies the GitHub asset digest or a matching SHA-256 checksum entry, writes a temporary file beside the installed binary, then atomically replaces it. A missing or mismatched checksum stops the update, including with `--force`. It does not restart the service; restart it after a successful update to run the new binary. `--check` only reports availability and makes no changes.
+
+`--force` permits replacing the binary when the release is not newer, which can install an older release. It never disables checksum verification or permits an invalid release tag.
+
 Flatpak installs are updated with `flatpak update ai.opencode.tether`, not with `opencode-tether update`.
 
 ### Troubleshooting

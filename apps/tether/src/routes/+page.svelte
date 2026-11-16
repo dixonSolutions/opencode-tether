@@ -5,7 +5,9 @@
   import Brand from '$lib/components/tether/Brand.svelte';
   import Onboarding from '$lib/components/tether/Onboarding.svelte';
   import HostLogin from '$lib/components/tether/HostLogin.svelte';
-  import Workspace from '$lib/components/tether/Workspace.svelte';
+  // Start the workspace chunk while credentials/health are still resolving. It is the
+  // screen most opens land on, and the import used to begin only after `ready`.
+  const workspace = import('$lib/components/tether/Workspace.svelte');
   import ConnectionError from '$lib/components/tether/ConnectionError.svelte';
 
   onMount(() => {
@@ -59,7 +61,7 @@
 {:else if app.phase === 'host-login'}
   <HostLogin />
 {:else if app.phase === 'ready'}
-  <Workspace />
+  {#await workspace then module}<module.default />{/await}
 {:else if app.phase === 'offline' || app.phase === 'unauthorized' || app.phase === 'error'}
   <ConnectionError />
 {:else}

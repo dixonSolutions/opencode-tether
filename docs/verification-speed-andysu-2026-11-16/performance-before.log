@@ -1,0 +1,15 @@
+
+> @opencode-tether/app@0.3.0 test:e2e
+> playwright test performance.spec.ts --workers=1
+
+[WebServer] (node:303694) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 1 test using 1 worker
+
+(node:303762) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+UI_PERFORMANCE {"mounted":35.30000000074506,"settled":35.30000000074506,"toggleMs":4,"tabMs":15.5,"overflow":0}
+  ✓  1 [chromium] › e2e/performance.spec.ts:4:1 › settings interaction latency and overflow (2.2s)
+
+  1 passed (4.3s)

@@ -15,5 +15,5 @@
     <span class="block text-sm font-medium leading-6">{label}</span>
     {#if description}<span class="mt-0.5 block text-xs leading-relaxed text-muted-foreground/60">{description}</span>{/if}
   </span>
-  <Switch bind:checked {disabled} onCheckedChange={onChange} class="mt-1 shrink-0" />
+  <Switch aria-label={label} bind:checked {disabled} onCheckedChange={onChange} class="mt-1 shrink-0" />
 </label>

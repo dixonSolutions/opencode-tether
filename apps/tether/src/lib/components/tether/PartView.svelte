@@ -63,7 +63,7 @@
     </button>
     {#if reasoningOpen}
       <div class="border-t border-border/40 px-3.5 py-3 text-sm text-muted-foreground/90">
-        <Markdown text={reasoning?.text ?? ''} />
+        <Markdown text={reasoning?.text ?? ''} {streaming} />
       </div>
     {/if}
   </div>

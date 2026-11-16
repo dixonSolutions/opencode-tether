@@ -2,6 +2,13 @@ export function isTauri(): boolean {
   return typeof window !== 'undefined' && ('__TAURI_INTERNALS__' in window || '__TAURI__' in window);
 }
 
+// Apply the cheap Android rendering path before the first frame, not after the async
+// plugin round-trip. Blur, shadows and animations are the expensive part of first paint.
+if (typeof document !== 'undefined' && typeof navigator !== 'undefined') {
+  if (isTauri()) document.documentElement.classList.add('is-tauri');
+  if (/Android/i.test(navigator.userAgent)) document.documentElement.classList.add('is-android');
+}
+
 export async function initPlatformClasses(): Promise<void> {
   if (typeof document === 'undefined') return;
   if (isTauri()) document.documentElement.classList.add('is-tauri');
@@ -9,7 +16,13 @@ export async function initPlatformClasses(): Promise<void> {
   if (await isFlatpak()) document.documentElement.classList.add('is-flatpak');
 }
 
-export async function isAndroid(): Promise<boolean> {
+let androidResult: Promise<boolean> | undefined;
+let flatpakResult: Promise<boolean> | undefined;
+
+export function isAndroid(): Promise<boolean> {
+  return androidResult ??= detectAndroid();
+}
+async function detectAndroid(): Promise<boolean> {
   if (typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent)) return true;
   if (!isTauri()) return false;
   try {
@@ -20,7 +33,10 @@ export async function isAndroid(): Promise<boolean> {
   }
 }
 
-export async function isFlatpak(): Promise<boolean> {
+export function isFlatpak(): Promise<boolean> {
+  return flatpakResult ??= detectFlatpak();
+}
+async function detectFlatpak(): Promise<boolean> {
   if (!isTauri()) return false;
   try {
     const { invoke } = await import('@tauri-apps/api/core');

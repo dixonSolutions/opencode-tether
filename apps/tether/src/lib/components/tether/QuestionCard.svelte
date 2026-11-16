@@ -24,6 +24,7 @@
 
   function toggle(questionIndex: number, label: string, multiple: boolean) {
     const current = selections[questionIndex] ?? [];
+    custom[questionIndex] = '';
     if (multiple) {
       selections[questionIndex] = current.includes(label) ? current.filter((item) => item !== label) : [...current, label];
     } else {
@@ -55,7 +56,7 @@
   }
 </script>
 
-<div class="overflow-hidden rounded-xl border border-sky-500/25 bg-sky-500/[0.05] android-no-blur shadow-[0_10px_40px_rgba(0,0,0,0.16)] backdrop-blur">
+<div id={`question-${request.id}`} data-question-id={request.id} role="region" aria-label="Question awaiting answer" tabindex="-1" class="overflow-hidden rounded-xl border border-sky-500/25 bg-sky-500/[0.05] android-no-blur shadow-[0_10px_40px_rgba(0,0,0,0.16)] backdrop-blur">
   <div class="flex items-start gap-3 px-4 py-3.5">
     <span class="mt-0.5 grid size-10 shrink-0 place-items-center rounded-xl border border-sky-500/25 bg-sky-500/10 text-sky-300">
       <MessageCircleQuestion class="size-5" />

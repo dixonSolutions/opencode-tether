@@ -43,8 +43,20 @@ pub async fn run(repo: &str, check_only: bool, force: bool) -> Result<()> {
     if !response.status().is_success() {
         bail!("GitHub returned HTTP {} for {url}", response.status());
     }
-    let release: Release = response.json().await.context("invalid GitHub release response")?;
-    let latest = release.tag_name.trim_start_matches('v');
+    let release: Release = response
+        .json()
+        .await
+        .context("invalid GitHub release response")?;
+    let latest = release
+        .tag_name
+        .strip_prefix('v')
+        .unwrap_or(&release.tag_name);
+    semver::Version::parse(latest).with_context(|| {
+        format!(
+            "GitHub returned an invalid release tag: {}",
+            release.tag_name
+        )
+    })?;
     let current = env!("CARGO_PKG_VERSION");
     let newer = is_newer(latest, current);
 
@@ -89,42 +101,15 @@ pub async fn run(repo: &str, check_only: bool, force: bool) -> Result<()> {
 
     let expected = expected_sha256(&client, &release, asset, latest, triple).await?;
     let actual = hex::encode(Sha256::digest(&bytes));
-    match expected {
-        Some(expected) => {
-            if expected != actual {
-                bail!("checksum mismatch: expected {expected}, got {actual}");
-            }
-            info!("sha256 verified: {actual}");
-        }
-        None if !force => {
-            bail!("release has no checksum for this asset; re-run with --force to install anyway");
-        }
-        None => {
-            println!("warning: no checksum available, installing without verification");
-        }
+    let expected = expected.context("release has no usable SHA-256 checksum for this asset")?;
+    if expected != actual {
+        bail!("checksum mismatch: expected {expected}, got {actual}");
     }
+    info!("sha256 verified: {actual}");
 
     let exe = std::env::current_exe().context("could not locate the running binary")?;
     let exe = exe.canonicalize().unwrap_or(exe);
-    let temp = exe.with_extension(format!("update-{}", std::process::id()));
-    {
-        let mut file = std::fs::File::create(&temp)
-            .with_context(|| format!("could not write {} (try sudo)", temp.display()))?;
-        file.write_all(&bytes)?;
-        file.sync_all()?;
-    }
-    #[cfg(unix)]
-    {
-        use std::os::unix::fs::PermissionsExt;
-        std::fs::set_permissions(&temp, std::fs::Permissions::from_mode(0o755))?;
-    }
-    if let Err(error) = std::fs::rename(&temp, &exe) {
-        let _ = std::fs::remove_file(&temp);
-        bail!(
-            "could not replace {}: {error}. Re-run with sudo, or move the binary into place manually.",
-            exe.display()
-        );
-    }
+    replace_binary_atomically(&exe, &bytes)?;
 
     println!("updated {} to {latest}", exe.display());
     if std::path::Path::new("/run/systemd/system").exists() {
@@ -142,7 +127,13 @@ async fn expected_sha256(
 ) -> Result<Option<String>> {
     if let Some(digest) = &asset.digest {
         if let Some(value) = digest.strip_prefix("sha256:") {
-            return Ok(Some(value.to_ascii_lowercase()));
+            if valid_sha256(value) {
+                return Ok(Some(value.to_ascii_lowercase()));
+            }
+            bail!(
+                "GitHub returned an invalid SHA-256 digest for {}",
+                asset.name
+            );
         }
     }
     let sidecar_names = [
@@ -151,7 +142,11 @@ async fn expected_sha256(
         "SHA256SUMS".to_string(),
     ];
     for name in sidecar_names {
-        let Some(sidecar) = release.assets.iter().find(|candidate| candidate.name == name) else {
+        let Some(sidecar) = release
+            .assets
+            .iter()
+            .find(|candidate| candidate.name == name)
+        else {
             continue;
         };
         let text = client
@@ -161,30 +156,72 @@ async fn expected_sha256(
             .error_for_status()?
             .text()
             .await?;
-        let needle = if name == "SHA256SUMS" { Some(asset.name.as_str()) } else { None };
-        for line in text.lines() {
-            let mut parts = line.split_whitespace();
-            let Some(hash) = parts.next() else { continue };
-            let file = parts.next().unwrap_or("");
-            if hash.len() == 64
-                && hash.chars().all(|c| c.is_ascii_hexdigit())
-                && needle.map(|needle| file.trim_start_matches('*').ends_with(needle)).unwrap_or(true)
-            {
-                return Ok(Some(hash.to_ascii_lowercase()));
-            }
+        if let Some(hash) = checksum_for_asset(&text, &asset.name, name != "SHA256SUMS") {
+            return Ok(Some(hash));
         }
     }
     Ok(None)
 }
 
 fn is_newer(latest: &str, current: &str) -> bool {
-    let Ok(latest) = semver::Version::parse(latest) else {
-        return latest != current;
-    };
-    let Ok(current) = semver::Version::parse(current) else {
-        return latest.to_string() != current;
-    };
-    latest > current
+    let latest = latest.strip_prefix('v').unwrap_or(latest);
+    let current = current.strip_prefix('v').unwrap_or(current);
+    match (
+        semver::Version::parse(latest),
+        semver::Version::parse(current),
+    ) {
+        (Ok(latest), Ok(current)) => latest.cmp_precedence(&current).is_gt(),
+        _ => false,
+    }
+}
+
+fn valid_sha256(value: &str) -> bool {
+    value.len() == 64 && value.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+fn checksum_for_asset(text: &str, asset_name: &str, allow_bare_hash: bool) -> Option<String> {
+    text.lines().find_map(|line| {
+        let mut parts = line.split_whitespace();
+        let hash = parts.next()?;
+        let file = parts.next().map(|file| file.trim_start_matches('*'));
+        (valid_sha256(hash) && (file == Some(asset_name) || (allow_bare_hash && file.is_none())))
+            .then(|| hash.to_ascii_lowercase())
+    })
+}
+
+fn replace_binary_atomically(exe: &std::path::Path, bytes: &[u8]) -> Result<()> {
+    let temp = exe.with_extension(format!("update-{}", std::process::id()));
+    let mut created_temp = false;
+    let result = (|| -> Result<()> {
+        let mut file = std::fs::OpenOptions::new()
+            .write(true)
+            .create_new(true)
+            .open(&temp)
+            .with_context(|| format!("could not create {} (try sudo)", temp.display()))?;
+        created_temp = true;
+        file.write_all(bytes)?;
+        #[cfg(unix)]
+        {
+            use std::os::unix::fs::PermissionsExt;
+            file.set_permissions(std::fs::Permissions::from_mode(0o755))?;
+        }
+        file.sync_all()?;
+        drop(file);
+        std::fs::rename(&temp, exe).with_context(|| {
+            format!(
+                "could not replace {}. Re-run with sudo, or move the binary into place manually.",
+                exe.display()
+            )
+        })?;
+        if let Some(parent) = exe.parent() {
+            std::fs::File::open(parent)?.sync_all()?;
+        }
+        Ok(())
+    })();
+    if result.is_err() && created_temp {
+        let _ = std::fs::remove_file(&temp);
+    }
+    result
 }
 
 fn current_triple() -> &'static str {
@@ -207,7 +244,72 @@ mod tests {
     fn compares_versions() {
         assert!(is_newer("0.2.0", "0.1.9"));
         assert!(!is_newer("0.1.0", "0.1.0"));
+        assert!(!is_newer("0.3.0+build.2", "0.3.0+build.1"));
         assert!(!is_newer("0.0.9", "0.1.0"));
         assert!(is_newer("1.0.0", "0.99.99"));
+        assert!(is_newer("v0.3.1", "0.3.0"));
+        assert!(is_newer("1.0.0", "1.0.0-rc.1"));
+        assert!(!is_newer("1.0.0-rc.1", "1.0.0"));
+        assert!(!is_newer("not-a-version", "0.3.0"));
+        assert!(!is_newer("0.3.1", "not-a-version"));
+    }
+
+    #[test]
+    fn validates_sha256_shape() {
+        assert!(valid_sha256(&"a".repeat(64)));
+        assert!(!valid_sha256(&"a".repeat(63)));
+        assert!(!valid_sha256(&format!("{}z", "a".repeat(63))));
+    }
+
+    #[test]
+    fn checksum_sums_must_name_the_requested_asset() {
+        let sums = format!(
+            "{}  other-binary\n{}  opencode-tether-x86_64\n",
+            "a".repeat(64),
+            "B".repeat(64)
+        );
+        assert_eq!(
+            checksum_for_asset(&sums, "opencode-tether-x86_64", false),
+            Some("b".repeat(64))
+        );
+        assert_eq!(checksum_for_asset(&sums, "missing-binary", false), None);
+        assert_eq!(
+            checksum_for_asset(&"c".repeat(64), "opencode-tether-x86_64", true),
+            Some("c".repeat(64))
+        );
+        assert_eq!(
+            checksum_for_asset(&"c".repeat(64), "opencode-tether-x86_64", false),
+            None
+        );
+    }
+
+    #[test]
+    fn atomic_replace_replaces_only_the_requested_file() {
+        let dir = std::env::temp_dir().join(format!("tether-update-test-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let target = dir.join("host");
+        std::fs::write(&target, b"old").unwrap();
+        replace_binary_atomically(&target, b"new binary").unwrap();
+        assert_eq!(std::fs::read(&target).unwrap(), b"new binary");
+        assert!(!target
+            .with_extension(format!("update-{}", std::process::id()))
+            .exists());
+        std::fs::remove_dir_all(dir).unwrap();
+    }
+
+    #[test]
+    fn failed_staging_preserves_target_and_existing_temp_file() {
+        let dir =
+            std::env::temp_dir().join(format!("tether-update-failure-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let target = dir.join("host");
+        let temp = target.with_extension(format!("update-{}", std::process::id()));
+        std::fs::write(&target, b"original executable").unwrap();
+        std::fs::write(&temp, b"preexisting staging file").unwrap();
+
+        assert!(replace_binary_atomically(&target, b"replacement").is_err());
+        assert_eq!(std::fs::read(&target).unwrap(), b"original executable");
+        assert_eq!(std::fs::read(&temp).unwrap(), b"preexisting staging file");
+        std::fs::remove_dir_all(dir).unwrap();
     }
 }

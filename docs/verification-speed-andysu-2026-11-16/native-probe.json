@@ -1,0 +1,9 @@
+{
+  "arch": "x86_64",
+  "flatpak": false,
+  "identifier": "ai.opencode.tether",
+  "name": "opencode-tether",
+  "nativeUpdateProbe": "payload-C",
+  "os": "android",
+  "version": "0.3.0"
+}

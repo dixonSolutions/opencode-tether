@@ -1,0 +1,20 @@
+app = "ai.opencode.tether"
+host_api = 3
+public_key = "keys/opencode-tether-public.pem"
+
+[remote]
+type = "github"
+repo = "dixonSolutions/opencode-tether"
+channel = "live-arm64"
+
+[policy]
+mode = "auto"
+apply = "live"
+live_fallback = "restart"
+restart_when = "now"
+# The Android host checks on open by default.
+check_interval_minutes = 60
+watchdog_ms = 120000
+# crash_signals stays at the default ("payload"): Android's WebView installs its own crash
+# handlers, and with "host" an abort on exit could roll back a good update closed before it
+# reported healthy.

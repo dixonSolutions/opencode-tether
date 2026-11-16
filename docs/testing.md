@@ -89,7 +89,17 @@ npm --prefix apps/tether run dev
 # open http://127.0.0.1:5173, add http://127.0.0.1:4096 as a remote, sign in
 ```
 
-The Playwright scripts used for the screenshots are intentionally not checked in with personal hosts or credentials; the repository-level checks are `npm run check`, `npm run build`, `cargo test`, and `cargo clippy`.
+The checked-in Playwright suite uses a mocked host and does not contain personal hosts or credentials:
+
+```sh
+npm --prefix apps/tether run test:e2e
+```
+
+It starts a development server on 4173 (or a production preview under CI). Coverage includes real HTTP response-body cancellation/timeouts, chunk-split SSE, global stream envelopes, event-ID replay, ordered 10,000-delta reduction, a 1,500-delta browser burst with composer interaction, EOF and silent-stream recovery, 500-message legacy transcripts, paginated history, directory-scoped permission replies, deep links outside the initial session list, 160,000-character reasoning, external permission/question replies, terminal lifecycle races, same-PTY reconnect and Unicode cursor resume, missing/exited PTYs, release version ordering, and responsive layouts.
+
+If local fontconfig returns no fonts and Chromium crashes in `SkFontMgr_FontConfigInterface`, run with a test-only `FONTCONFIG_FILE` pointing at available font directories; no system font settings need to change. Browser tests must run against the changed source or a newly built preview.
+
+The host updater tests replace only disposable temporary files and cover exact checksum filenames, missing/invalid checksum handling, prereleases, atomic replacement, and preserving the original on staging failure. They do not install a release or change the running service.
 
 ## Screenshots
 
@@ -102,3 +112,15 @@ The Playwright scripts used for the screenshots are intentionally not checked in
 - [Android landscape](screenshots/android-landscape.png)
 - [Desktop app](screenshots/desktop-app.png)
 - [Terminal](screenshots/terminal.png)
+
+
+Question recovery regressions in `e2e/streaming.spec.ts` cover pending multi-question deep links outside capped lists, reload, dropped SSE/reconciliation, background directory discovery, session switching, legacy/global events, request-ID reply/reject clearing, option/custom/multiple answer payloads, stale snapshots after replies, and running-tool navigation to the answer panel. See [the question verification record](verification-question-2026-11-16.md) for real-agent browser checks and cleanup.
+
+
+## AndySU and interaction performance
+
+Run `npm --prefix apps/tether run test:unit` and `bash scripts/test-andysu-release.sh` in addition to the existing server/check/build/E2E commands. `e2e/andysu.spec.ts` checks host-only controls and status transitions; `e2e/performance.spec.ts` checks switch acknowledgement, asynchronous persisted state, settings/tab latency, and horizontal overflow. Performance budgets are 50 ms for toggle feedback and 150 ms for sheet/tab interaction. Production-build measurements should be compared separately from Vite's cold development-module compilation. Run browser benchmarks separately from the emulator to avoid software-renderer contention.
+
+The Android config builds a deterministic `assets/tether-web.zip`. For an emulator update test, split the debug APK with a disposable keystore and AndySU keypair, install a plain APK, seed test settings, then install its host over it. Publish a second payload with changed HTML and unchanged native/dex/resources; trigger JobScheduler and assert the PID survives, the new HTML appears, the running payload version changes, the unsent draft survives, and AndySU emits `live_swapped` plus `committed`. Publish a native-different payload next and assert automatic PID replacement, recovered state, and commit. Never manually reopen between publishing and checking the result. Test the Updates tab on plain, host, live-updated, and automatically-restarted builds.
+
+Use `flock /tmp/andysu-heavy.lock systemd-run --user --scope -p MemoryMax=10G -- <command>` for Gradle/emulator/cargo-release work, only one emulator, and check memory first. Use disposable signing material, local test channels, and listeners. Stop Gradle and the emulator, remove forwards/reverses, wipe disposable emulator data, and delete test keys/sites/APKs after testing; retain sanitized evidence. The exact local commands, results, measurements, and limits are in [the verification report](verification-speed-andysu-2026-11-16.md).

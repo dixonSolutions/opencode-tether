@@ -1,0 +1,48 @@
+--------- beginning of main
+11-16 02:34:57.708  5595  5595 I AndySU-Event: {"core":"0.1.0","sdk":36,"abi":"x86_64","event":"init"}
+11-16 02:34:57.708  5595  5595 I AndySU-Event: {"events":[],"in_trial":false,"slot":null,"slot_dir":null,"event":"launch"}
+11-16 02:34:57.708  5595  5595 I AndySU-Event: {"version":"0.3.0","factory":true,"trial":false,"transparent":true,"event":"booted"}
+11-16 02:34:57.710  5595  5622 I AndySU-Event: {"status":{"trigger":"open","state":"checking"},"event":"update_status"}
+11-16 02:34:57.722  5595  5622 I AndySU-Event: {"status":{"code":"net","message":"java.io.IOException: HTTP 404 for http:\/\/127.0.0.1:53257\/stable\/update.json","state":"error"},"event":"update_status"}
+11-16 02:34:58.128  5595  5641 I AndySU-Event: {"status":{"trigger":"job","state":"checking"},"event":"update_status"}
+11-16 02:34:58.136  5595  5641 I AndySU-Event: {"status":{"code":"net","message":"java.io.IOException: HTTP 404 for http:\/\/127.0.0.1:53257\/stable\/update.json","state":"error"},"event":"update_status"}
+11-16 02:34:58.275  5595  5686 I AndySU-Event: {"policy":"live","event":"apply_policy"}
+11-16 02:35:18.697  5595  5686 I AndySU-Event: {"mode":"off","event":"update_mode"}
+11-16 02:35:18.897  5595  5686 I AndySU-Event: {"mode":"download_only","event":"update_mode"}
+11-16 02:35:18.898  5595  5622 I AndySU-Event: {"status":{"trigger":"user","state":"checking"},"event":"update_status"}
+11-16 02:35:18.903  5595  5622 I AndySU-Event: {"status":{"code":"net","message":"java.io.IOException: HTTP 404 for http:\/\/127.0.0.1:53257\/stable\/update.json","state":"error"},"event":"update_status"}
+11-16 02:35:18.903  5595  6162 I AndySU-Event: {"status":{"trigger":"job","state":"checking"},"event":"update_status"}
+11-16 02:35:18.908  5595  6162 I AndySU-Event: {"status":{"code":"net","message":"java.io.IOException: HTTP 404 for http:\/\/127.0.0.1:53257\/stable\/update.json","state":"error"},"event":"update_status"}
+11-16 02:35:18.912  5595  5686 I AndySU-Event: {"mode":"off","event":"update_mode"}
+11-16 02:35:20.403  5595  5686 I AndySU-Event: {"mode":"auto","event":"update_mode"}
+11-16 02:35:20.405  5595  6188 I AndySU-Event: {"status":{"trigger":"job","state":"checking"},"event":"update_status"}
+11-16 02:35:20.408  5595  6188 I AndySU-Event: {"status":{"code":"net","message":"java.io.IOException: HTTP 404 for http:\/\/127.0.0.1:53257\/stable\/update.json","state":"error"},"event":"update_status"}
+11-16 02:35:23.963  5595  6247 I AndySU-Event: {"status":{"trigger":"job","state":"checking"},"event":"update_status"}
+11-16 02:35:24.461  5595  6247 I AndySU-Event: {"status":{"already_staged":false,"download_bytes":1796271,"hot_only":false,"mandatory":false,"native_live":true,"notes_url":null,"outcome":"update","release":"0.3.1","sequence":1,"not_modified":false,"state":"downloading"},"event":"update_status"}
+11-16 02:35:26.142  5595  6247 I AndySU-Event: {"status":{"already_staged":false,"download_bytes":1796271,"hot_only":false,"mandatory":false,"native_live":true,"notes_url":null,"outcome":"update","release":"0.3.1","sequence":1,"not_modified":false,"state":"staged"},"event":"update_status"}
+11-16 02:35:26.143  5595  5595 I AndySU-Event: {"pending":"0.3.1","native_live":true,"handler":true,"resumed":true,"event":"apply_decision"}
+11-16 02:35:26.155  5595  5595 I AndySU-Event: {"from":"0.3.0","to":"0.3.1","event":"live_swap_requested"}
+11-16 02:35:26.313  5595  5595 I TetherUpdate: ignored stale document ready acknowledgement
+11-16 02:35:26.428  5595  5595 I TetherUpdate: update applied live version=0.3.1 pid=5595
+11-16 02:35:26.433  5595  5595 I AndySU-Event: {"from":"0.3.0","to":"0.3.1","event":"live_swapped"}
+11-16 02:35:26.439  5595  5595 I AndySU-Event: {"version":"0.3.1","result":{"event":"committed","id":"0.3.1"},"state":{"bad":[],"current":{"id":"0.3.1","native_live":true,"sequence":1},"install_id":"<disposable-test-install>","last_event":"{\"event\":\"committed\",\"id\":\"0.3.1\"}","last_manifest":{"etag":"\"1393-18e865ee28176841\"","issued":1794796525,"sequence":1,"sha256":"513b4159999e4b71e33914c9bc80fc16888414ed784ab813ea97609e6c30cc1d"},"live_swaps":1,"pending":null,"previous":null,"trial":null,"v":1},"event":"committed"}
+11-16 02:35:26.439  5595  5595 I AndySU-Event: {"status":{"release":"0.3.1","state":"up_to_date"},"event":"update_status"}
+11-16 02:35:26.474  5595  5622 I AndySU-Event: {"result":{"freed_bytes":1796271,"removed_blobs":2,"removed_blobs_held_by_slots":2,"removed_slots":[]},"low_storage":false,"event":"gc"}
+11-16 02:36:17.711  5595  7430 I AndySU-Event: {"status":{"trigger":"job","state":"checking"},"event":"update_status"}
+11-16 02:36:17.916  5595  7430 I AndySU-Event: {"status":{"already_staged":false,"download_bytes":1670456,"hot_only":false,"mandatory":false,"native_live":true,"notes_url":null,"outcome":"update","release":"0.3.2","sequence":2,"not_modified":false,"state":"downloading"},"event":"update_status"}
+11-16 02:36:19.459  5595  7430 I AndySU-Event: {"status":{"already_staged":false,"download_bytes":1670456,"hot_only":false,"mandatory":false,"native_live":true,"notes_url":null,"outcome":"update","release":"0.3.2","sequence":2,"not_modified":false,"state":"staged"},"event":"update_status"}
+11-16 02:36:19.460  5595  5595 I AndySU-Event: {"pending":"0.3.2","native_live":true,"handler":true,"resumed":true,"event":"apply_decision"}
+11-16 02:36:19.461  5595  5595 I TetherUpdate: native change: automatic restart fallback
+11-16 02:36:19.461  5595  5595 I AndySU-Event: {"to":"0.3.2","event":"live_swap_declined"}
+11-16 02:36:19.462  5595  5595 I AndySU-Event: {"reason":"applying update","event":"relaunch"}
+11-16 02:36:19.710  7491  7491 I AndySU-Event: {"core":"0.1.0","sdk":36,"abi":"x86_64","event":"init"}
+11-16 02:36:19.710  7491  7491 I AndySU-Event: {"events":[{"event":"promoted","id":"0.3.2"},{"attempt":1,"event":"trial_boot","id":"0.3.2"}],"in_trial":true,"slot":{"id":"0.3.2","native_live":true,"sequence":2},"slot_dir":"\/data\/user\/0\/ai.opencode.tether\/no_backup\/andysu\/slots\/0.3.2","event":"launch"}
+11-16 02:36:19.710  7491  7491 I AndySU-Event: {"version":"0.3.2","factory":false,"trial":true,"transparent":true,"event":"booted"}
+11-16 02:36:19.712  7491  7509 I AndySU-Event: {"status":{"trigger":"open","state":"checking"},"event":"update_status"}
+11-16 02:36:19.722  7491  7509 I AndySU-Event: {"status":{"outcome":"up_to_date","sequence":2,"not_modified":true,"state":"up_to_date"},"event":"update_status"}
+11-16 02:36:20.093  7491  7542 I AndySU-Event: {"status":{"trigger":"job","state":"checking"},"event":"update_status"}
+11-16 02:36:20.106  7491  7542 I AndySU-Event: {"status":{"outcome":"up_to_date","sequence":2,"not_modified":true,"state":"up_to_date"},"event":"update_status"}
+11-16 02:36:20.193  7491  7583 I AndySU-Event: {"policy":"live","event":"apply_policy"}
+11-16 02:36:20.259  7491  7491 I AndySU-Event: {"event":"crash_handler_replaced","signals":["SIGSEGV","SIGABRT","SIGBUS","SIGFPE","SIGILL","SIGTRAP"],"chained":false}
+11-16 02:36:27.990  7491  7491 I AndySU-Event: {"version":"0.3.2","result":{"event":"committed","id":"0.3.2"},"state":{"bad":[],"current":{"id":"0.3.2","native_live":true,"sequence":2},"install_id":"<disposable-test-install>","last_event":"{\"event\":\"committed\",\"id\":\"0.3.2\"}","last_manifest":{"etag":"\"28e1-18e865faaa55d952\"","issued":1794796578,"sequence":2,"sha256":"46ef83c45c8bc470a481b1fe3f918c64766e3826f07303625ab4734ed65f2912"},"live_swaps":0,"pending":null,"previous":{"id":"0.3.1","native_live":true,"sequence":1},"trial":null,"v":1},"event":"committed"}
+11-16 02:36:28.015  7491  7509 I AndySU-Event: {"result":{"freed_bytes":44714855,"removed_blobs":3,"removed_blobs_held_by_slots":3,"removed_slots":[]},"low_storage":false,"event":"gc"}

@@ -1,0 +1,58 @@
+
+> @opencode-tether/app@0.3.0 test:e2e
+> playwright test --workers=2
+
+[WebServer] (node:374242) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+[WebServer] (Use `node --trace-warnings ...` to show where the warning was created)
+
+Running 42 tests using 2 workers
+
+(node:374290) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+(node:374291) Warning: The 'NO_COLOR' env is ignored due to the 'FORCE_COLOR' env being set.
+(Use `node --trace-warnings ...` to show where the warning was created)
+UI_PERFORMANCE {"mounted":39.80000000074506,"settled":149.30000000074506,"toggleMs":17.799999997019768,"tabMs":22.199999999254942,"overflow":0}
+  ✓   2 [chromium] › e2e/performance.spec.ts:4:1 › settings interaction latency and overflow (2.3s)
+  ✓   1 [chromium] › e2e/andysu.spec.ts:4:1 › host Updates replaces APK updater, reflects states, and exposes only valid actions (2.7s)
+  ✓   4 [chromium] › e2e/streaming.spec.ts:16:1 › SSE cancellation survives headers and CRLF split across network chunks (62ms)
+  ✓   5 [chromium] › e2e/streaming.spec.ts:39:1 › burst deltas retain order and stale snapshots cannot roll back live text or deletions (13ms)
+  ✓   3 [chromium] › e2e/performance.spec.ts:35:1 › a pointer toggle acknowledges immediately and persists the final value asynchronously (2.1s)
+  ✓   6 [chromium] › e2e/streaming.spec.ts:93:1 › live burst remains responsive and EOF reconnect resyncs missed output without duplication (2.1s)
+  ✓   7 [chromium] › e2e/performance.spec.ts:60:1 › Android settings keep accessible controls without expensive or flashing effects (1.2s)
+  ✓   9 [chromium] › e2e/terminal-layout.spec.ts:4:1 › closing while PTY creation is pending disposes the late PTY (1.4s)
+  ✓  10 [chromium] › e2e/terminal-layout.spec.ts:39:1 › PTY startup errors remain visible without an automatic retry loop (1.8s)
+  ✓  11 [chromium] › e2e/terminal-layout.spec.ts:60:1 › terminal authentication rejection stops reconnect attempts promptly (1.8s)
+  ✓   8 [chromium] › e2e/streaming.spec.ts:116:1 › watchdog aborts silent body and automatically opens a new stream (5.9s)
+  ✓  12 [chromium] › e2e/terminal-layout.spec.ts:86:1 › unexpected terminal disconnect resumes the same PTY from its output cursor (2.2s)
+  ✓  13 [chromium] › e2e/streaming.spec.ts:125:1 › large transcripts bound mounted messages and large reasoning stays usable at 320px (2.3s)
+  ✓  15 [chromium] › e2e/streaming.spec.ts:147:1 › request timeout also covers a stalled response body (103ms)
+  ✓  16 [chromium] › e2e/streaming.spec.ts:162:1 › SSE resumes from explicit event IDs and skips replayed IDs (7ms)
+  ✓  17 [chromium] › e2e/streaming.spec.ts:188:1 › permission and question replies from another client clear cards by requestID (1.1s)
+  ✓  14 [chromium] › e2e/terminal-layout.spec.ts:158:1 › a PTY removed by a host restart stops reconnecting and reports that the shell is gone (2.7s)
+  ✓  18 [chromium] › e2e/streaming.spec.ts:204:1 › a delayed transcript snapshot preserves newer stream replacements (1.2s)
+  ✓  19 [chromium] › e2e/tether.spec.ts:32:1 › desktop keeps one left sidebar and readable, comfortable controls (1.0s)
+  ✓  20 [chromium] › e2e/streaming.spec.ts:229:1 › message pagination limits initial data and loads older history in the same directory (1.3s)
+  ✓  22 [chromium] › e2e/streaming.spec.ts:254:1 › permission responses target the requesting session directory (1.1s)
+  ✓  21 [chromium] › e2e/tether.spec.ts:42:1 › mobile sessions, settings, remotes, and details all open on the left with a clear Close button (1.8s)
+  ✓  23 [chromium] › e2e/streaming.spec.ts:267:1 › older hosts fall back from global events to the selected directory stream (1.1s)
+  ✓  24 [chromium] › e2e/tether.spec.ts:66:1 › project picker starts at home, searches folders, and creates the session in the chosen directory (1.7s)
+  ✓  25 [chromium] › e2e/streaming.spec.ts:274:1 › permission refresh during a session switch cannot erase a concurrent request (1.1s)
+  ✓  27 [chromium] › e2e/streaming.spec.ts:295:1 › deep links fetch sessions outside the initial capped session list (978ms)
+  ✓  26 [chromium] › e2e/tether.spec.ts:93:1 › recent folders are offered after a choice, open in one tap, and can be removed (2.1s)
+  ✓  29 [chromium] › e2e/tether.spec.ts:111:1 › sessions waiting on a permission are pinned under Needs you and open on click (1.1s)
+  ✓  28 [chromium] › e2e/streaming.spec.ts:318:1 › pending multi-question deep link survives capped refresh/reconnect and replies in its directory (4.2s)
+  ✓  30 [chromium] › e2e/tether.spec.ts:125:1 › layout has no horizontal overflow and touch controls reach 44px at phone, tablet, and desktop widths (4.4s)
+  ✓  31 [chromium] › e2e/streaming.spec.ts:357:1 › missed question is fetched after SSE drop and periodic reconciliation (2.4s)
+  ✓  33 [chromium] › e2e/streaming.spec.ts:370:1 › legacy question events survive concurrent snapshots and rejection uses requestID (1.2s)
+  ✓  32 [chromium] › e2e/update-flow.spec.ts:28:1 › shows the update banner for a newer release (1.3s)
+  ✓  34 [chromium] › e2e/streaming.spec.ts:390:1 › running question tool directs the user to the answer panel instead of empty input (1.2s)
+  ✓  35 [chromium] › e2e/update-flow.spec.ts:38:1 › treats a main prerelease as older than the stable app version (1.3s)
+  ✓  36 [chromium] › e2e/streaming.spec.ts:402:1 › pending requests hydrate omitted sessions and stale snapshots cannot resurrect a replied question (1.1s)
+  ✓  37 [chromium] › e2e/update-flow.spec.ts:48:1 › rejects an invalid release version (1.4s)
+  ✓  39 [chromium] › e2e/update-flow.spec.ts:58:1 › compares with the host version in host mode (1.3s)
+  ✓  40 [chromium] › e2e/version.spec.ts:5:3 › release version comparison › orders prereleases before their stable release (1ms)
+  ✓  41 [chromium] › e2e/version.spec.ts:10:3 › release version comparison › compares prerelease identifiers using SemVer precedence (1ms)
+  ✓  42 [chromium] › e2e/version.spec.ts:17:3 › release version comparison › rejects malformed versions instead of reporting an update (1ms)
+  ✓  38 [chromium] › e2e/streaming.spec.ts:426:1 › reconnect discovers a background directory question whose session is omitted from the capped list (2.6s)
+
+  42 passed (37.1s)

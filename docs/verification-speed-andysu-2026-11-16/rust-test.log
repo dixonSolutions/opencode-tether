@@ -1,0 +1,30 @@
+   Compiling opencode-tether v0.3.0 (/var/home/ratnode2/Projects/opencode-tether/server)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.63s
+     Running unittests src/main.rs (server/target/debug/build/opencode-tether/a741cb1bea85651a/out/opencode_tether-a741cb1bea85651a)
+
+running 22 tests
+test config::tests::normalizes_defaults ... ok
+test tests::parses_port ... ok
+test auth::tests::basic_parsing ... ok
+test proxy::tests::detects_api_paths ... ok
+test tests::quotes_paths ... ok
+test folders::tests::empty_query_and_missing_root_return_nothing ... ok
+test folders::tests::finds_matches_at_any_level_within_depth ... ok
+test update::tests::checksum_sums_must_name_the_requested_asset ... ok
+test update::tests::compares_versions ... ok
+test update::tests::atomic_replace_replaces_only_the_requested_file ... ok
+test folders::tests::does_not_search_below_max_depth ... ok
+test folders::tests::skips_hidden_and_build_folders ... ok
+test update::tests::validates_sha256_shape ... ok
+test web::tests::rejects_traversal ... ok
+test update::tests::failed_staging_preserves_target_and_existing_temp_file ... ok
+test web::tests::embeds_built_assets ... ok
+test config::tests::redacts_secrets ... ok
+test proxy::tests::websocket_ticket_does_not_authorize_host_by_itself ... ok
+test auth::tests::token_round_trip_and_tamper ... ok
+test proxy::tests::websocket_auth_token_authorizes_host_but_is_not_forwarded ... ok
+test config::tests::hashes_and_verifies ... ok
+test auth::tests::verifies_credentials ... ok
+
+test result: ok. 22 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.28s
+

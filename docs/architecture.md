@@ -38,7 +38,7 @@ The opencode client (`src/lib/api/client.ts`) is a thin typed fetch wrapper. Web
 - Argon2 password hashing, signed HttpOnly cookies, optional Basic auth, constant-time username checks, and a login rate limiter.
 - Reverse proxy for the opencode HTTP API, including streaming SSE. Responses are gzip/brotli compressed except event streams, which must reach the browser unbuffered.
 - Folder search for the picker (`/api/tether/folders/search`): a bounded walk of up to three folder levels, 400 folders, 60 matches and 1.5 s per request, skipping hidden and build folders.
-- PTY WebSocket proxy with ticket or Basic-derived upstream auth.
+- PTY WebSocket proxy with independent host cookie/Basic/auth-token authorization and upstream ticket validation. Only configured upstream credentials are forwarded; a ticket alone does not authorize access to the host.
 - Upstream process supervisor: expands the command, starts it, waits for `/global/health`, logs, and stops it on shutdown.
 - GitHub release self-updater with SHA-256 verification.
 - Systemd user/system service generation.
@@ -65,7 +65,7 @@ The opencode client (`src/lib/api/client.ts`) is a thin typed fetch wrapper. Web
 
 ## Event handling
 
-The app subscribes to `/event` and handles the legacy event stream:
+The app subscribes to `/global/event`, unwraps directory envelopes, and falls back to a directory-scoped `/event` on older hosts. It handles:
 
 - `server.connected`
 - `message.updated`
@@ -77,7 +77,15 @@ The app subscribes to `/event` and handles the legacy event stream:
 - `todo.updated`
 - `installation.update-available`
 
-Message parts are merged by ID into the selected session. Events for other sessions update the session list and status dots but not the open transcript. A throttled refresh repairs missed frames.
+Message updates, part replacements, removals, and text/reasoning deltas are reduced in stream order in 16 ms batches, using message and part IDs. Events for other sessions update the session list and status dots but not the open transcript. Unknown parts trigger a bounded refresh; snapshot reconciliation preserves live replacements and deletions received during a request. Initial metadata loads replay concurrent status, session, permission, and question changes before finishing.
+
+The fetch signal stays attached through response body reads, including SSE. The parser handles CRLF split across network chunks and counts comment keepalives as activity. It yields to the browser after 8 ms of burst processing. Explicit SSE IDs are retained for `Last-Event-ID` and a bounded replay dedupe cache. Legacy opencode streams without IDs recover through authoritative API snapshots; they do not provide durable event replay or an exactly-once delivery guarantee.
+
+The watchdog checks every 5 seconds, probes after 30 seconds without bytes, and cancels a silent body after 45 seconds even when health succeeds. EOF and network failures retry with jittered exponential backoff from roughly 1 to 20 seconds. A healthy HTTP probe does not label SSE as live. Visibility/page restoration checks stale connections; an online event restarts the stream and resyncs. Automatic recovery respects the reconnect setting.
+
+The transcript requests and mounts the latest 60 messages using opencode’s `limit`/`before` pagination and the opaque `X-Next-Cursor` returned by the server. Older hosts that ignore the limit retain the same bounded initial rendering; hosts without cursor headers load full history only when earlier messages are requested. Session operations, agent/config/model discovery, permissions, questions, and PTY requests carry the selected session directory; global events still update other sessions. Earlier messages are fetched in batches of 60 with scroll position preserved. A content ResizeObserver follows rendered markdown and tool output when the reader is at the bottom. Markdown is throttled while streaming, reasoning uses the same path, highlighting is limited to explicitly labelled code blocks up to 12,000 characters, and parts over 64,000 characters use escaped plain text to bound parsing cost while retaining all content.
+
+The terminal reconnects to its existing PTY with refreshed tickets and a resume cursor, with six bounded retries from 500 ms up to 8 seconds. Closing or changing sessions cancels pending retries and deletes only the PTY it created. Missing/exited PTYs require an explicit new shell; auth failures stop recovery. Cursor offsets follow the upstream’s JavaScript string indexing, as defined in [opencode’s PTY implementation](https://github.com/anomalyco/opencode/blob/v1.19.5/packages/core/src/pty.ts). Recovery is limited by the output retained upstream.
 
 ## Updates
 
@@ -95,3 +103,10 @@ Message parts are merged by ID into the selected session. Events for other sessi
 - The host's auth is independent of opencode's auth.
 - Browser-hosted remote mode trusts the browser's local storage with remote credentials. A compromised browser profile can read them. Use unique host passwords or keys.
 - The host does not expose a shell by default. The terminal is an explicit user action inside an already-authenticated session, and it runs on the opencode host under the user opencode runs as.
+
+
+### Pending question recovery
+
+Question lists belong to an opencode directory instance. The app captures the directory used by each request, retains directory metadata from global event envelopes, and merges snapshots only within that scope. It keeps requests whose session metadata is missing, fetches those sessions directly, and retains the selected/pending sessions across capped session-list refreshes. Question discovery checks the default, selected, recent, and already discovered session/request directories with at most four directory requests in flight. A deep link resolves its session before scoped requests are fetched.
+
+Startup, session switches, reconnect/resume, and the 20-second health poll reconcile pending questions. Live additions/removals take precedence over an in-flight snapshot; replied/rejected request IDs cannot be resurrected by a stale snapshot. Both legacy and global event envelopes support `question.asked`, `question.replied`, and `question.rejected`, including `requestID` removal. Failed answer submissions keep the card available; successful submissions refresh transcript/status state. A running question tool points to the answer panel even when its tool input is empty.

@@ -106,7 +106,7 @@ struct UpdateArgs {
     /// Only check for an update.
     #[arg(long)]
     check: bool,
-    /// Install even when the version is not newer or no checksum exists.
+    /// Install even when the version is not newer (checksum verification is still required).
     #[arg(long)]
     force: bool,
     /// GitHub repository in owner/name form.

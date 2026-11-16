@@ -2551,6 +2551,7 @@ dependencies = [
 name = "opencode-tether"
 version = "0.3.0"
 dependencies = [
+ "jni",
  "serde",
  "serde_json",
  "tauri",

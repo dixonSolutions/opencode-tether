@@ -345,6 +345,15 @@
 .live-dot {
   animation: tether-pulse 1.6s ease-in-out infinite;
 }
+.terminal-surface,
+.terminal-surface .xterm {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+}
+.terminal-surface .xterm {
+  overflow: hidden;
+}
 @keyframes shimmer {
   100% { transform: translateX(100%); }
 }
@@ -359,4 +368,51 @@
   transform: translateX(-100%);
   background: linear-gradient(90deg, transparent, color-mix(in oklch, var(--foreground) 6%, transparent), transparent);
   animation: shimmer 1.8s infinite;
+}
+
+/* Feedback must finish within a frame budget, including on slower Android WebViews. */
+[data-slot="sheet-content"], [data-slot="dialog-content"],
+[data-slot="sheet-overlay"], [data-slot="dialog-overlay"],
+[data-slot="switch"], [data-slot="switch-thumb"], button {
+  animation-duration: 100ms;
+  transition-duration: 100ms;
+}
+.is-android *, .is-android *::before, .is-android *::after {
+  transition-duration: 80ms !important;
+  animation: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.is-android svg, .is-android [class*="blur-"] {
+  filter: none !important;
+}
+.is-android [class*="shadow-lg"], .is-android [class*="shadow-xl"], .is-android [class*="shadow-2xl"] {
+  box-shadow: none !important;
+}
+.is-android [data-slot="sheet-overlay"], .is-android [data-slot="dialog-overlay"] {
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+}
+.is-android [data-slot="sheet-content"], .is-android [data-slot="dialog-content"] {
+  box-shadow: none !important;
+  animation: none !important;
+  transition: none !important;
+}
+.is-android [data-slot="switch"], .is-android [data-slot="switch-thumb"] {
+  transition: none !important;
+}
+/* Keep functional progress feedback; it makes waits feel shorter and is not decorative. */
+.is-android .animate-spin { animation: spin 0.8s linear infinite !important; }
+.is-android .animate-pulse { animation: pulse 1.4s ease-in-out infinite !important; }
+.is-android .animate-bounce { animation: bounce 1s infinite !important; }
+.is-android .live-dot { animation: tether-pulse 1.6s ease-in-out infinite !important; }
+/* The track remains compact; its transparent hit area is at least 44px high. */
+[data-slot="switch"]::before { content: ""; position: absolute; inset: -10px -2px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+/* Remove browser tap delay/highlight from controls; keyboard focus is unaffected. */
+button, [role="button"], [role="tab"], [role="switch"], a {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }

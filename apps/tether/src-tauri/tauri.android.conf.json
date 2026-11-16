@@ -1,0 +1,6 @@
+{
+  "build": {
+    "beforeBuildCommand": "npm run build && python3 ../../scripts/package-android-web.py",
+    "frontendDist": "bootstrap"
+  }
+}

@@ -1,7 +1,11 @@
 <script lang="ts">
   import { Marked } from 'marked';
   import DOMPurify from 'dompurify';
-  import hljs from 'highlight.js/lib/common';
+  import { loadHighlighter } from '$lib/highlight';
+  let hljs = $state<Awaited<ReturnType<typeof loadHighlighter>> | null>(null);
+  $effect(() => {
+    if (!streaming && /```/.test(text)) void loadHighlighter().then(value => { hljs = value; });
+  });
   import { copyText, openExternal } from '$lib/platform';
 
   let { text = '', class: className = '', streaming = false }: { text?: string; class?: string; streaming?: boolean } = $props();
@@ -14,16 +18,16 @@
         const language = (lang ?? '').split(/\s+/)[0];
         let highlighted = '';
         const escaped = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
-        if (!streaming) {
+        if (hljs && !streaming && text.length <= 12_000) {
           try {
-            highlighted = language && hljs.getLanguage(language) ? hljs.highlight(text, { language }).value : hljs.highlightAuto(text).value;
+            highlighted = language && hljs.getLanguage(language) ? hljs.highlight(text, { language }).value : escaped;
           } catch {
             highlighted = escaped;
           }
         } else {
           highlighted = escaped;
         }
-        return `<pre data-lang="${language}"><code class="hljs">${highlighted}</code></pre>`;
+        return `<pre data-lang="${language.replace(/[^a-zA-Z0-9_+-]/g, '')}"><code class="hljs">${highlighted}</code></pre>`;
       }
     }
   });
@@ -35,6 +39,10 @@
   let renderTimer: ReturnType<typeof setTimeout> | null = null;
 
   function render(source: string) {
+    if (source.length > 64_000) {
+      html = `<div class="whitespace-pre-wrap break-words">${source.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')}</div>`;
+      return;
+    }
     let rendered = '';
     try {
       rendered = marked.parse(source, { async: false }) as string;
@@ -57,14 +65,9 @@
       lastRender = performance.now();
       return;
     }
-    const now = performance.now();
-    if (now - lastRender >= 70) {
-      render(source);
-      lastRender = now;
-      return;
-    }
     pending = source;
     if (renderTimer) return;
+    const delay = Math.max(0, 70 - (performance.now() - lastRender));
     renderTimer = setTimeout(() => {
       renderTimer = null;
       const next = pending;
@@ -73,7 +76,7 @@
         render(next);
         lastRender = performance.now();
       }
-    }, 70);
+    }, delay);
   });
 
   $effect(() => {

@@ -1,0 +1,12 @@
+opencode-tether
+v0.3.0
+Android app · updates itself
+
+Couldn’t check for updates · will try again
+
+Check now
+Update automatically
+Check on open and hourly. UI updates reload live; native changes apply automatically (screen may reload).
+GitHub
+--- controls
+["button:Check now","switch:Update automatically[true]","button:GitHub"]

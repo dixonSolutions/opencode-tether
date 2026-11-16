@@ -1,10 +1,15 @@
 <script lang="ts">
   import { app } from '$lib/state/app.svelte';
+  import { settings } from '$lib/state/settings.svelte';
   import Brand from './Brand.svelte';
   import StatusDot from './StatusDot.svelte';
   import MessageView from './MessageView.svelte';
   import Composer from './Composer.svelte';
-  import TerminalSheet from './TerminalSheet.svelte';
+  import { idlePreload } from '$lib/idle';
+  let TerminalSheet = $state<typeof import('./TerminalSheet.svelte').default | null>(null);
+  const loadTerminalSheet = () => import('./TerminalSheet.svelte').then(module => { TerminalSheet = module.default; });
+  $effect(() => { if (terminalOpen) void loadTerminalSheet(); });
+  $effect(() => idlePreload(loadTerminalSheet));
   import PermissionCard from './PermissionCard.svelte';
   import QuestionCard from './QuestionCard.svelte';
   import { Root as Button } from '$lib/components/ui/button/index.js';
@@ -59,31 +64,39 @@
   const session = $derived(app.selectedSession);
   const title = $derived(session?.title || (session ? 'Untitled session' : 'New session'));
   const busy = $derived(app.isBusy);
-  const signature = $derived(
-    `${app.messages.length}:${app.messages.at(-1)?.parts.length ?? 0}:${
-      (() => {
-        const last = app.messages.at(-1)?.parts.at(-1);
-        return last && 'text' in last ? last.text.length : 0;
-      })()
-    }:${busy}`
-  );
+  let visibleCount = $state(60);
+  const visibleMessages = $derived(app.messages.slice(-visibleCount));
 
-  $effect(() => {
-    signature;
-    app.selectedSessionId;
-    if (!scroller) return;
-    if (stick) {
-      requestAnimationFrame(() => scroller?.scrollTo({ top: scroller.scrollHeight, behavior: 'instant' as ScrollBehavior }));
-    }
-  });
+  function followContent(node: HTMLDivElement) {
+    let frame = 0;
+    const observer = new ResizeObserver(() => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        if (settings.autoScroll && stick && scroller) scroller.scrollTop = scroller.scrollHeight;
+      });
+    });
+    observer.observe(node);
+    return { destroy: () => { observer.disconnect(); cancelAnimationFrame(frame); } };
+  }
 
   $effect(() => {
     app.selectedSessionId;
-    requestAnimationFrame(() => {
-      stick = true;
+    visibleCount = 60;
+    stick = true;
+    const frame = requestAnimationFrame(() => {
       scroller?.scrollTo({ top: scroller.scrollHeight, behavior: 'instant' as ScrollBehavior });
     });
+    return () => cancelAnimationFrame(frame);
   });
+
+  async function showEarlier() {
+    const height = scroller.scrollHeight;
+    const top = scroller.scrollTop;
+    if (app.messages.length <= visibleCount) await app.loadEarlierMessages();
+    visibleCount += 60;
+    await tick();
+    scroller.scrollTop = top + scroller.scrollHeight - height;
+  }
 
   function onScroll() {
     if (!scroller) return;
@@ -222,8 +235,8 @@
 
   <div class="relative flex min-h-0 flex-1 flex-col">
     <div class="relative flex min-h-0 flex-1 flex-col">
-    <div bind:this={scroller} onscroll={onScroll} class="tether-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain scroll-smooth">
-      <div class="mx-auto w-full max-w-3xl px-4 pb-6 pt-4 sm:px-6 sm:pt-6 2xl:max-w-4xl">
+    <div bind:this={scroller} data-testid="transcript" onscroll={onScroll} class="tether-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain">
+      <div use:followContent class="mx-auto w-full max-w-3xl px-4 pb-6 pt-4 sm:px-6 sm:pt-6 2xl:max-w-4xl">
         {#if app.messagesLoading && app.messages.length === 0}
           <div class="space-y-5 py-4">
             <div class="flex gap-2"><Skeleton class="size-5 rounded-md" /><div class="flex-1 space-y-2"><Skeleton class="h-3 w-24" /><Skeleton class="h-3 w-full" /><Skeleton class="h-3 w-4/5" /></div></div>
@@ -262,8 +275,11 @@
           </div>
         {:else}
           <div class="space-y-6 sm:space-y-7">
-            {#each app.messages as message, index (message.info.id)}
-              <MessageView {message} isLast={index === app.messages.length - 1} />
+            {#if app.messages.length > visibleCount || app.hasOlderMessages}
+              <Button variant="outline" class="w-full" onclick={showEarlier} disabled={app.loadingOlder}>{app.loadingOlder ? 'Loading earlier messages…' : 'Show earlier messages'}{app.messages.length > visibleCount ? ` (${app.messages.length - visibleCount})` : ''}</Button>
+            {/if}
+            {#each visibleMessages as message, index (message.info.id)}
+              <MessageView {message} isLast={index === visibleMessages.length - 1} />
             {/each}
           </div>
         {/if}
@@ -302,7 +318,7 @@
   </div>
 </section>
 
-<TerminalSheet bind:open={terminalOpen} />
+{#if TerminalSheet}<TerminalSheet bind:open={terminalOpen} />{/if}
 
 <Dialog.Root bind:open={renameOpen}>
   <Dialog.Content class="sm:max-w-md">

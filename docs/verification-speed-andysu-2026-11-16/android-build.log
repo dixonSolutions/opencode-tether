@@ -1,0 +1,149 @@
+
+> @opencode-tether/app@0.3.0 tauri
+> tauri android build --debug --target x86_64 --apk --config src-tauri/tauri.android.conf.json
+
+        Info Using installed NDK: /var/home/ratnode2/Android/Sdk/ndk/27.2.12479018
+        Info Looking up installed tauri packages to check mismatched versions...
+     Running beforeBuildCommand `npm run build && python3 ../../scripts/package-android-web.py`
+
+> @opencode-tether/app@0.3.0 build
+> vite build
+
+vite v7.3.7 building ssr environment for production...
+transforming...
+✓ 1234 modules transformed.
+rendering chunks...
+vite v7.3.7 building client environment for production...
+transforming...
+✓ 1256 modules transformed.
+rendering chunks...
+computing gzip size...
+.svelte-kit/output/client/_app/version.json                                                             0.03 kB │ gzip:  0.05 kB
+.svelte-kit/output/client/_app/immutable/assets/jetbrains-mono-vietnamese-wght-normal.Bt-aOZkq.woff2    7.50 kB
+.svelte-kit/output/client/_app/immutable/assets/jetbrains-mono-greek-wght-normal.Bw9x6K1M.woff2         9.00 kB
+.svelte-kit/output/client/_app/immutable/assets/inter-vietnamese-wght-normal.CBcvBZtf.woff2            10.25 kB
+.svelte-kit/output/client/_app/immutable/assets/inter-greek-ext-wght-normal.DlzME5K_.woff2             11.23 kB
+.svelte-kit/output/client/_app/immutable/assets/jetbrains-mono-cyrillic-wght-normal.D73BlboJ.woff2     12.11 kB
+.svelte-kit/output/client/.vite/manifest.json                                                          14.65 kB │ gzip:  1.82 kB
+.svelte-kit/output/client/_app/immutable/assets/jetbrains-mono-latin-ext-wght-normal.DBQx-q_a.woff2    15.20 kB
+.svelte-kit/output/client/_app/immutable/assets/inter-cyrillic-wght-normal.DqGufNeO.woff2              18.75 kB
+.svelte-kit/output/client/_app/immutable/assets/inter-greek-wght-normal.CkhJZR-_.woff2                 19.00 kB
+.svelte-kit/output/client/_app/immutable/assets/inter-cyrillic-ext-wght-normal.BOeWTOD4.woff2          25.96 kB
+.svelte-kit/output/client/_app/immutable/assets/jetbrains-mono-latin-wght-normal.B9CIFXIH.woff2        40.40 kB
+.svelte-kit/output/client/_app/immutable/assets/inter-latin-wght-normal.Dx4kXJAl.woff2                 48.26 kB
+.svelte-kit/output/client/_app/immutable/assets/inter-latin-ext-wght-normal.DO1Apj_S.woff2             85.07 kB
+.svelte-kit/output/client/_app/immutable/assets/Workspace.BtelLifA.css                                  0.59 kB │ gzip:  0.33 kB
+.svelte-kit/output/client/_app/immutable/assets/TerminalSheet.DDGTF8rc.css                              3.62 kB │ gzip:  0.99 kB
+.svelte-kit/output/client/_app/immutable/assets/0.Ctiba8LD.css                                        153.10 kB │ gzip: 26.82 kB
+.svelte-kit/output/client/_app/immutable/nodes/2.BrSjkOaP.js                                            0.11 kB │ gzip:  0.12 kB │ map:   0.09 kB
+.svelte-kit/output/client/_app/immutable/chunks/DU6bjDnJ.js                                             0.38 kB │ gzip:  0.25 kB │ map:   3.71 kB
+.svelte-kit/output/client/_app/immutable/chunks/5t6UF90S.js                                             0.40 kB │ gzip:  0.31 kB │ map:   1.85 kB
+.svelte-kit/output/client/_app/immutable/nodes/1.D3fc20di.js                                            0.47 kB │ gzip:  0.32 kB │ map:   5.48 kB
+.svelte-kit/output/client/_app/immutable/chunks/0JinuUei.js                                             0.48 kB │ gzip:  0.36 kB │ map:   2.03 kB
+.svelte-kit/output/client/_app/immutable/chunks/D8A5dS0c.js                                             0.63 kB │ gzip:  0.45 kB │ map:   2.50 kB
+.svelte-kit/output/client/_app/immutable/chunks/B33rt0xE.js                                             0.76 kB │ gzip:  0.32 kB │ map:   4.99 kB
+.svelte-kit/output/client/_app/immutable/chunks/SGd-c5us.js                                             1.13 kB │ gzip:  0.72 kB │ map:   8.60 kB
+.svelte-kit/output/client/_app/immutable/chunks/DtWl8UC3.js                                             1.30 kB │ gzip:  0.53 kB │ map:  13.42 kB
+.svelte-kit/output/client/_app/immutable/chunks/B-b9lrYd.js                                             1.41 kB │ gzip:  0.69 kB │ map:   2.76 kB
+.svelte-kit/output/client/_app/immutable/chunks/iid4EIlO.js                                             1.91 kB │ gzip:  0.80 kB │ map:   9.67 kB
+.svelte-kit/output/client/_app/immutable/chunks/UuRMiGS6.js                                             2.36 kB │ gzip:  0.89 kB │ map:  19.39 kB
+.svelte-kit/output/client/_app/immutable/chunks/u6rXC47n.js                                             2.73 kB │ gzip:  1.14 kB │ map:  24.97 kB
+.svelte-kit/output/client/_app/immutable/chunks/z4KEymWr.js                                             2.97 kB │ gzip:  1.47 kB │ map:   9.76 kB
+.svelte-kit/output/client/_app/immutable/chunks/7CVK93dn.js                                             3.20 kB │ gzip:  1.61 kB │ map:  10.64 kB
+.svelte-kit/output/client/_app/immutable/chunks/BzDZRwHJ.js                                             3.48 kB │ gzip:  1.18 kB │ map:  36.91 kB
+.svelte-kit/output/client/_app/immutable/chunks/YcZYgM3M.js                                             3.57 kB │ gzip:  1.54 kB │ map:  13.24 kB
+.svelte-kit/output/client/_app/immutable/entry/app.D7ftF60z.js                                          4.19 kB │ gzip:  1.93 kB │ map:  17.28 kB
+.svelte-kit/output/client/_app/immutable/chunks/D5jmV60p.js                                             5.72 kB │ gzip:  2.67 kB │ map:  37.41 kB
+.svelte-kit/output/client/_app/immutable/chunks/MN_gZrxP.js                                             6.47 kB │ gzip:  2.90 kB │ map:  44.52 kB
+.svelte-kit/output/client/_app/immutable/chunks/OJuCLi7D.js                                             6.54 kB │ gzip:  2.66 kB │ map:  26.09 kB
+.svelte-kit/output/client/_app/immutable/chunks/fBVCKtta.js                                             7.81 kB │ gzip:  3.11 kB │ map:  31.55 kB
+.svelte-kit/output/client/_app/immutable/chunks/DzsPFijH.js                                             9.70 kB │ gzip:  4.26 kB │ map:  85.02 kB
+.svelte-kit/output/client/_app/immutable/chunks/Cx__LlXj.js                                            13.49 kB │ gzip:  4.42 kB │ map:  26.51 kB
+.svelte-kit/output/client/_app/immutable/chunks/CFvHqgBY.js                                            15.01 kB │ gzip:  5.57 kB │ map:  38.07 kB
+.svelte-kit/output/client/_app/immutable/chunks/D8FegVtD.js                                            21.06 kB │ gzip:  8.51 kB │ map: 109.38 kB
+.svelte-kit/output/client/_app/immutable/entry/start.BXZ7fnOk.js                                       21.90 kB │ gzip:  8.62 kB │ map: 176.28 kB
+.svelte-kit/output/client/_app/immutable/chunks/Hvqxiu35.js                                            22.63 kB │ gzip:  7.68 kB │ map:  49.15 kB
+.svelte-kit/output/client/_app/immutable/chunks/D-Ig9Yjt.js                                            28.56 kB │ gzip: 10.95 kB │ map: 288.75 kB
+.svelte-kit/output/client/_app/immutable/nodes/0.RwRLiUwD.js                                           29.52 kB │ gzip: 11.02 kB │ map: 144.01 kB
+.svelte-kit/output/client/_app/immutable/chunks/Cf9X9g30.js                                            86.18 kB │ gzip: 27.03 kB │ map: 354.00 kB
+.svelte-kit/output/client/_app/immutable/chunks/BETzDKye.js                                           182.07 kB │ gzip: 55.19 kB │ map: 740.92 kB
+.svelte-kit/output/client/_app/immutable/chunks/Ca8mvirr.js                                           284.09 kB │ gzip: 87.59 kB │ map: 895.86 kB
+.svelte-kit/output/client/_app/immutable/chunks/BMu6O7kQ.js                                           342.15 kB │ gzip: 88.18 kB │ map: 727.40 kB
+✓ built in 4.78s
+.svelte-kit/output/server/_app/immutable/assets/jetbrains-mono-vietnamese-wght-normal.Bt-aOZkq.woff2    7.50 kB
+.svelte-kit/output/server/.vite/manifest.json                                                           8.25 kB
+.svelte-kit/output/server/_app/immutable/assets/jetbrains-mono-greek-wght-normal.Bw9x6K1M.woff2         9.00 kB
+.svelte-kit/output/server/_app/immutable/assets/inter-vietnamese-wght-normal.CBcvBZtf.woff2            10.25 kB
+.svelte-kit/output/server/_app/immutable/assets/inter-greek-ext-wght-normal.DlzME5K_.woff2             11.23 kB
+.svelte-kit/output/server/_app/immutable/assets/jetbrains-mono-cyrillic-wght-normal.D73BlboJ.woff2     12.11 kB
+.svelte-kit/output/server/_app/immutable/assets/jetbrains-mono-latin-ext-wght-normal.DBQx-q_a.woff2    15.20 kB
+.svelte-kit/output/server/_app/immutable/assets/inter-cyrillic-wght-normal.DqGufNeO.woff2              18.75 kB
+.svelte-kit/output/server/_app/immutable/assets/inter-greek-wght-normal.CkhJZR-_.woff2                 19.00 kB
+.svelte-kit/output/server/_app/immutable/assets/inter-cyrillic-ext-wght-normal.BOeWTOD4.woff2          25.96 kB
+.svelte-kit/output/server/_app/immutable/assets/jetbrains-mono-latin-wght-normal.B9CIFXIH.woff2        40.40 kB
+.svelte-kit/output/server/_app/immutable/assets/inter-latin-wght-normal.Dx4kXJAl.woff2                 48.26 kB
+.svelte-kit/output/server/_app/immutable/assets/inter-latin-ext-wght-normal.DO1Apj_S.woff2             85.07 kB
+.svelte-kit/output/server/_app/immutable/assets/Workspace.BtelLifA.css                                  0.59 kB
+.svelte-kit/output/server/_app/immutable/assets/_layout.cSV6z7eU.css                                  153.03 kB
+.svelte-kit/output/server/entries/pages/_layout.ts.js                                                   0.12 kB │ map:   0.30 kB
+.svelte-kit/output/server/entries/pages/_page.svelte.js                                                 0.17 kB │ map:   0.10 kB
+.svelte-kit/output/server/env.js                                                                        0.18 kB │ map:   0.09 kB
+.svelte-kit/output/server/chunks/server.js                                                              0.30 kB │ map:   1.75 kB
+.svelte-kit/output/server/internal.js                                                                   0.37 kB │ map:   0.09 kB
+.svelte-kit/output/server/chunks/circle-check.js                                                        0.41 kB │ map:   2.39 kB
+.svelte-kit/output/server/chunks/utils2.js                                                              0.64 kB │ map:   2.60 kB
+.svelte-kit/output/server/entries/fallbacks/error.svelte.js                                             0.71 kB │ map:   7.42 kB
+.svelte-kit/output/server/chunks/exports.js                                                             2.59 kB │ map:  12.19 kB
+.svelte-kit/output/server/chunks/internal.js                                                            3.51 kB │ map:   7.63 kB
+.svelte-kit/output/server/chunks/root.js                                                                8.11 kB │ map:  76.57 kB
+.svelte-kit/output/server/chunks/utils.js                                                              15.05 kB │ map:  81.94 kB
+.svelte-kit/output/server/remote-entry.js                                                              15.70 kB │ map:  93.25 kB
+.svelte-kit/output/server/chunks/index.js                                                              17.21 kB │ map: 123.88 kB
+.svelte-kit/output/server/chunks/attrs.js                                                              18.86 kB │ map:  99.09 kB
+.svelte-kit/output/server/chunks/events.js                                                             20.11 kB │ map: 237.00 kB
+.svelte-kit/output/server/entries/pages/_layout.svelte.js                                              20.58 kB │ map: 130.49 kB
+.svelte-kit/output/server/index.js                                                                     57.70 kB │ map: 297.38 kB
+.svelte-kit/output/server/chunks/_page.js                                                             134.68 kB │ map: 418.82 kB
+.svelte-kit/output/server/chunks/Workspace.js                                                         157.75 kB │ map: 489.54 kB
+✓ built in 10.08s
+
+Run npm run preview to preview your production build locally.
+
+> Using @sveltejs/adapter-static
+  Wrote site to "build"
+  ✔ done
+Packaged Android web content
+   Compiling opencode-tether v0.3.0 (/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 1.47s
+        Info symlinking lib "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/target/x86_64-linux-android/debug/libopencode_tether_lib.so" in jniLibs dir "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/gen/android/app/src/main/jniLibs/x86_64"
+        Info "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/target/x86_64-linux-android/debug/libopencode_tether_lib.so" requires shared lib "libandroid.so"
+        Info "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/target/x86_64-linux-android/debug/libopencode_tether_lib.so" requires shared lib "libdl.so"
+        Info "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/target/x86_64-linux-android/debug/libopencode_tether_lib.so" requires shared lib "liblog.so"
+        Info "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/target/x86_64-linux-android/debug/libopencode_tether_lib.so" requires shared lib "libm.so"
+        Info "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/target/x86_64-linux-android/debug/libopencode_tether_lib.so" requires shared lib "libc.so"
+        Info symlink at "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/gen/android/app/src/main/jniLibs/x86_64/libopencode_tether_lib.so" points to "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/target/x86_64-linux-android/debug/libopencode_tether_lib.so"
+
+> @opencode-tether/app@0.3.0 tauri
+> tauri android android-studio-script --target x86_64
+
+        Info connection; remote_addr=127.0.0.1:42166 conn_id=0
+        Info Using installed NDK: /var/home/ratnode2/Android/Sdk/ndk/27.2.12479018
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.20s
+        Info symlinking lib "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/target/x86_64-linux-android/debug/libopencode_tether_lib.so" in jniLibs dir "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/gen/android/app/src/main/jniLibs/x86_64"
+        Info "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/target/x86_64-linux-android/debug/libopencode_tether_lib.so" requires shared lib "libandroid.so"
+        Info "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/target/x86_64-linux-android/debug/libopencode_tether_lib.so" requires shared lib "libdl.so"
+        Info "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/target/x86_64-linux-android/debug/libopencode_tether_lib.so" requires shared lib "liblog.so"
+        Info "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/target/x86_64-linux-android/debug/libopencode_tether_lib.so" requires shared lib "libm.so"
+        Info "/var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/target/x86_64-linux-android/debug/libopencode_tether_lib.so" requires shared lib "libc.so"
+Java compiler version 21 has deprecated support for compiling with source/target version 8.
+Try one of the following options:
+    1. [Recommended] Use Java toolchain with a lower language version
+    2. Set a higher source/target version
+    3. Use a lower version of the JDK running the build (if you're not using Java toolchain)
+For more details on how to configure these settings, see https://developer.android.com/build/jdks.
+To suppress this warning, set android.javaCompile.suppressSourceTargetDeprecationWarning=true in gradle.properties.
+Add android.sync.suppressAgpWarnings=JAVA_COMPILE_DEPRECATED_SOURCE_TARGET to the gradle.properties file to suppress this warning.
+Configuration cache entry reused.
+    Finished 1 APK at:
+        /var/home/ratnode2/Projects/opencode-tether/apps/tether/src-tauri/gen/android/app/build/outputs/apk/universal/debug/app-universal-debug.apk
+
